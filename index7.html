@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>Пиццашоп с кодами 2.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root {
+    --primary-color: #ffca28;
+    --secondary-color: #ff6f00;
+    --dark-bg: rgba(0,0,0,0.7);
+    --item-bg: #222;
+    --accent-shadow: #ffca28;
+    --button-active-shadow: #cc5500;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: url('https://i.imgur.com/4Nk4Ewd.jpg') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Fredoka One', cursive, Arial, sans-serif;
+    color: #fff;
+    text-align: center;
+  }
+
+  .overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--dark-bg);
+    z-index: -1;
+  }
+
+  h1 {
+    margin-top: 40px;
+    font-size: 3em;
+    text-shadow: 2px 2px 6px #000;
+  }
+
+  #coins {
+    color: var(--primary-color);
+    text-shadow: 1px 1px 3px #000;
+  }
+
+  #coins::after {
+    content: " 👔";
+    display: inline-block;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .has-boss #coins::after {
+    opacity: 1;
+  }
+
+  .has-king #coins::after {
+    content: " 👑";
+  }
+
+  #addCoinBtn {
+    margin: 20px auto 20px;
+    padding: 20px 60px;
+    font-size: 24px;
+    font-weight: bold;
+    background: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 5px var(--button-active-shadow);
+    cursor: pointer;
+    transition: all 0.1s ease;
+    user-select: none;
+  }
+
+  #addCoinBtn:active {
+    transform: translateY(4px);
+    box-shadow: 0 1px var(--button-active-shadow);
+  }
+
+  #saveLoadButtons {
+    margin: 0 auto 40px;
+  }
+
+  #saveLoadButtons button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background: #4a90e2;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    color: white;
+    font-weight: bold;
+    margin: 0 5px;
+  }
+
+  #shop {
+    max-width: 500px;
+    margin: 0 auto 20px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 15px;
+    padding: 20px;
+  }
+
+  .item {
+    background: var(--item-bg);
+    border-radius: 10px;
+    margin: 10px 0;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 0 8px var(--accent-shadow);
+  }
+
+  .item button {
+    background: var(--primary-color);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #000;
+    transition: background 0.3s ease;
+  }
+
+  .item button:disabled {
+    background: #999;
+    cursor: not-allowed;
+  }
+
+  #codeForm {
+    max-width: 400px;
+    margin: 0 auto 40px;
+    background: rgba(0,0,0,0.6);
+    padding: 15px 20px;
+    border-radius: 15px;
+    box-shadow: 0 0 10px var(--accent-shadow);
+  }
+
+  #codeInput {
+    padding: 10px;
+    width: 70%;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+  }
+
+  #codeSubmit {
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary-color);
+    font-weight: bold;
+    cursor: pointer;
+    color: #000;
+  }
+
+  #message {
+    margin-top: 10px;
+    font-weight: bold;
+    min-height: 24px;
+  }
+
+  footer {
+    color: #ddd;
+    font-size: 0.9em;
+    margin-bottom: 20px;
+  }
+
+  /* Стили для битвы */
+  #battleUI {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.9);
+    padding: 20px;
+    border-radius: 15px;
+    border: 3px solid #ff0000;
+    z-index: 1000;
+    text-align: center;
+    width: 350px;
+  }
+  
+  @media (max-width: 480px) {
+    #battleUI {
+      width: 90%;
+      padding: 15px;
+    }
+  }
+
+  #battleUI h2 {
+    color: #ff5555;
+    margin-top: 0;
+  }
+
+  #battleUI button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 5px;
+    transition: transform 0.1s;
+  }
+
+  #attackBtn {
+    background: #ff5555;
+    color: white;
+  }
+
+  #healBtn {
+    background: #4CAF50;
+    color: white;
+  }
+
+  #battleLog {
+    margin-top: 15px;
+    height: 100px;
+    overflow-y: auto;
+    border: 1px solid #444;
+    padding: 5px;
+    text-align: left;
+    font-size: 0.9em;
+    font-family: Arial, sans-serif;
+  }
+
+  .health-bar-container {
+    height: 20px;
+    background: #555;
+    margin-top: 5px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .health-bar {
+    height: 100%;
+    transition: width 0.3s;
+  }
+
+  #playerHealthBar {
+    background: #4CAF50;
+  }
+
+  #enemyHealthBar {
+    background: #f44336;
+  }
+
+  #battleButton {
+    margin-top: 20px;
+    padding: 15px 30px;
+    background: linear-gradient(45deg, #ff3333, #cc0000);
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px #990000;
+    transition: all 0.1s;
+  }
+
+  #battleButton:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px #990000;
+  }
+
+  /* Earthbound-стиль */
+  .critical-hit {
+    animation: shake 0.5s;
+    color: #ffcc00 !important;
+    font-weight: bold;
+  }
+
+  @keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+  }
+
+  .battle-effect {
+    position: absolute;
+    font-size: 24px;
+    animation: float-up 1s forwards;
+  }
+
+  @keyframes float-up {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-50px); }
+  }
+  
+  .cheesy-mode h1 {
+    color: yellow;
+    text-shadow: 2px 2px 5px orange;
+  }
+
+  .cheesy-mode #addCoinBtn {
+    background: linear-gradient(45deg, yellow, gold);
+  }
+
+  /* Новые стили для кота и ивентов */
+  .lucky-cat {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 100px;
+    cursor: pointer;
+    animation: float 3s infinite ease-in-out;
+    display: none;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+  
+  .event-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 10px;
+    z-index: 1001;
+    animation: pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  
+  @keyframes charge-up {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+  
+  .charge-animation {
+    animation: charge-up 0.5s infinite;
+  }
+
+  /* Стили для модальных окон */
+  .modal {
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-content {
+    background: rgba(0,0,0,0.9);
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 400px;
+    text-align: center;
+  }
+
+  .modal-content textarea, .modal-content input {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #4a90e2;
+    background: #333;
+    color: white;
+  }
+
+  .modal-content button {
+    padding: 10px 20px;
+    background: #4a90e2;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    margin: 5px;
+  }
+</style>
+</head>
+<body>
+
+<div class="overlay"></div>
+
+<h1>Пиццакоины: <span id="coins">0</span></h1>
+<button id="addCoinBtn">Получить пиццакоин</button>
+
+<div id="saveLoadButtons">
+  <button id="saveBtn">Получить код сохранения</button>
+  <button id="loadBtn">Загрузить сохранение</button>
+</div>
+
+<div id="shop">
+  <h2>Магазин классов</h2>
+  <div class="item">
+    <div>Повар — 100 пиццакоинов</div>
+    <button data-price="100" data-class="повар">Купить</button>
+  </div>
+  <div class="item">
+    <div>Кассир — 150 пиццакоинов</div>
+    <button data-price="150" data-class="кассир">Купить</button>
+  </div>
+  <div class="item">
+    <div>Доставщик — 200 пиццакоинов</div>
+    <button data-price="200" data-class="доставщик">Купить</button>
+  </div>
+  <div class="item">
+    <div>Босс — 250 пиццакоинов</div>
+    <button data-price="250" data-class="босс">Купить</button>
+  </div>
+  <div class="item">
+    <div>Король пиццы — 300 пиццакоинов</div>
+    <button data-price="300" data-class="король">Купить</button>
+  </div>
+  <div class="item">
+    <div>Пицца-Ниндзя — 500 пиццакоинов</div>
+    <button data-price="500" data-class="пицца-ниндзя">Купить</button>
+  </div>
+  <div class="item">
+    <div>Кулинарный Маг — 600 пиццакоинов</div>
+    <button data-price="600" data-class="кулинарный маг">Купить</button>
+  </div>
+  <div class="item">
+    <div>Фуд-Критик — 400 пиццакоинов</div>
+    <button data-price="400" data-class="фуд-критик">Купить</button>
+  </div>
+  <button id="battleButton">Битва с конкурентами</button>
+</div>
+
+<div id="codeForm">
+  <h2>Введите секретный код</h2>
+  <input type="text" id="codeInput" placeholder="Введите код..." />
+  <button id="codeSubmit">Активировать</button>
+  <div id="message"></div>
+</div>
+
+<img id="luckyCat" class="lucky-cat" src="https://i.imgur.com/J5Q8a0j.png" title="Кот удачи! Кликни для монет">
+
+<footer>
+  <div>Купленные классы: <span id="ownedClasses">нет</span></div>
+  <div>Секретные роли: <span id="secretRoles">нет</span></div>
+</footer>
+
+<div id="saveModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h3>Твой код сохранения</h3>
+    <textarea id="saveCodeArea" rows="5" readonly></textarea>
+    <button id="copySaveCodeBtn">Копировать</button>
+    <button id="closeSaveModalBtn">Закрыть</button>
+  </div>
+</div>
+
+<div id="loadModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h3>Вставь код сохранения</h3>
+    <input type="text" id="loadCodeInput" placeholder="Вставь код сюда..." />
+    <button id="applyLoadCodeBtn">Загрузить</button>
+    <button id="closeLoadModalBtn">Отмена</button>
+  </div>
+</div>
+
+<audio id="clickSound" src="https://freesound.org/data/previews/64/64501_634166-lq.mp3"></audio>
+<audio id="bgMusic" src="https://pizza-coin-mus.edgeone.app/08.%20Good%20Morning%20Pizzeria.mp3" loop></audio>
+<audio id="battleSound" src="https://freesound.org/data/previews/511/511919_919539-lq.mp3"></audio>
+<audio id="winSound" src="https://freesound.org/data/previews/467/467390_8437853-lq.mp3"></audio>
+<audio id="luigiSound" src="https://www.myinstants.com/media/sounds/mamma-mia-luigi.mp3"></audio>
+
+<script>
+  // =====================
+  // ОСНОВНЫЕ ПЕРЕМЕННЫЕ
+  // =====================
+  let coins, ownedClasses, secretRoles, usedCodes;
+  const clickSound = document.getElementById('clickSound');
+  const luigiSound = document.getElementById('luigiSound');
+  const messageEl = document.getElementById('message');
+  let currentClickSound = clickSound;
+  
+  // Кодирование и декодирование в Base64
+  function encode(str) {
+      return btoa(unescape(encodeURIComponent(str)));
+  }
+  
+  function decode(str) {
+      try {
+          return decodeURIComponent(escape(atob(str)));
+      } catch (e) {
+          console.error("Ошибка декодирования", e);
+          return null;
+      }
+  }
+
+  function loadData() {
+    try {
+      coins = parseInt(localStorage.getItem('pizzacoins')) || 0;
+      ownedClasses = JSON.parse(localStorage.getItem('ownedClasses')) || [];
+      secretRoles = JSON.parse(localStorage.getItem('secretRoles')) || [];
+      usedCodes = JSON.parse(localStorage.getItem('usedCodes')) || [];
+    } catch (e) {
+      console.error("Ошибка при загрузке данных:", e);
+      coins = 0;
+      ownedClasses = [];
+      secretRoles = [];
+      usedCodes = [];
+    }
+  }
+  
+  function saveData() {
+    localStorage.setItem('pizzacoins', coins);
+    localStorage.setItem('ownedClasses', JSON.stringify(ownedClasses));
+    localStorage.setItem('secretRoles', JSON.stringify(secretRoles));
+    localStorage.setItem('usedCodes', JSON.stringify(usedCodes));
+  }
+
+  let autoClickerIntervals = {};
+  let luckyCatActive = false;
+  let eventActive = false;
+  let autoClickersDisabled = false;
+
+  // Битва
+  let isBattleActive = false;
+  let battleInterval = null;
+  let battleHealth = 100;
+  let battleEnemyHealth = 100;
+  let currentEnemy = "";
+  let enemyAttackInterval = 3000;
+  let isCriticalHit = false;
+
+  const battleRewards = {
+    "Бургер-Гангстер": 50,
+    "Суши-Робот": 80,
+    "Кракен-Кальмар": 120,
+    "Босс Конкурентов": 200
+  };
+
+  const enemies = [
+    { name: "Бургер-Гангстер", hp: 120, attack: "кетчупом", weakness: null },
+    { name: "Суши-Робот", hp: 150, attack: "рыбным ножом", weakness: "кулинарный маг" },
+    { name: "Кракен-Кальмар", hp: 200, attack: "щупальцами", weakness: "пицца-ниндзя" },
+    { name: "Босс Конкурентов", hp: 300, attack: "нечестными приёмами", weakness: null }
+  ];
+
+  // Получение элементов DOM
+  const coinsEl = document.getElementById('coins');
+  const btn = document.getElementById('addCoinBtn');
+  const battleSound = document.getElementById('battleSound');
+  const winSound = document.getElementById('winSound');
+  const ownedEl = document.getElementById('ownedClasses');
+  const secretRolesEl = document.getElementById('secretRoles');
+  const shopButtons = document.querySelectorAll('#shop button');
+  const codeInput = document.getElementById('codeInput');
+  const codeSubmit = document.getElementById('codeSubmit');
+  const battleButton = document.getElementById('battleButton');
+  const saveBtn = document.getElementById('saveBtn');
+  const loadBtn = document.getElementById('loadBtn');
+  const saveModal = document.getElementById('saveModal');
+  const loadModal = document.getElementById('loadModal');
+  const saveCodeArea = document.getElementById('saveCodeArea');
+  const copySaveCodeBtn = document.getElementById('copySaveCodeBtn');
+  const closeSaveModalBtn = document.getElementById('closeSaveModalBtn');
+  const loadCodeInput = document.getElementById('loadCodeInput');
+  const applyLoadCodeBtn = document.getElementById('applyLoadCodeBtn');
+  const closeLoadModalBtn = document.getElementById('closeLoadModalBtn');
+
+  // =====================
+  // НОВЫЕ ФУНКЦИИ 2.0
+  // =====================
+  function playSound(sound) {
+    if (sound) {
+      sound.currentTime = 0;
+      sound.play().catch(e => console.log(`Не удалось воспроизвести звук ${sound.id}:`, e));
+    }
+  }
+
+  // Кот удачи
+  function startLuckyCatTimer() {
+    setInterval(() => {
+      if (luckyCatActive && !eventActive) {
+        coins += 10;
+        showMessage("Кот удачи принёс вам 10 монет!");
+        updateDisplay();
+      }
+    }, 300000); // 5 минут
+  }
+
+  // Система ивентов
+  function checkForEvents() {
+    if (ownedClasses.includes('босс') && Math.random() < 0.2 && !eventActive) {
+      startRandomEvent();
+    }
+  }
+
+  function startRandomEvent() {
+    eventActive = true;
+    const events = [
+      bossBattleEvent,
+      stealWorkersEvent
+    ];
+    events[Math.floor(Math.random() * events.length)]();
+  }
+
+  function bossBattleEvent() {
+    showEventNotification("БОСС КОНКУРЕНТОВ АТАКУЕТ! Приготовьтесь к тяжёлой битве!");
+    
+    currentEnemy = "Босс Конкурентов";
+    battleEnemyHealth = 300;
+    enemyAttackInterval = 2000;
+    startBattleLogic();
+  }
+
+  function stealWorkersEvent() {
+    showEventNotification("Босс конкурентов похитил ваших работников! Быстро заработайте 50 монет без автокликеров!");
+    
+    autoClickersDisabled = true;
+    clearAllAutoClickers();
+    
+    let timer = 60;
+    const countdown = setInterval(() => {
+      timer--;
+      if (timer <= 0) {
+        clearInterval(countdown);
+        failStealEvent();
+      }
+    }, 1000);
+    
+    const originalCoins = coins;
+    const checkInterval = setInterval(() => {
+      if (coins >= originalCoins + 50) {
+        clearInterval(countdown);
+        clearInterval(checkInterval);
+        successStealEvent();
+      }
+    }, 100);
+  }
+
+  function successStealEvent() {
+    showMessage("Вы спасли работников! +100 монет бонуса!");
+    coins += 100;
+    autoClickersDisabled = false;
+    restartAutoClickers();
+    eventActive = false;
+  }
+
+  function failStealEvent() {
+    showMessage("Работники ушли к конкурентам... Автокликеры отключены на 5 минут!");
+    setTimeout(() => {
+      autoClickersDisabled = false;
+      restartAutoClickers();
+      eventActive = false;
+    }, 300000);
+  }
+
+  function clearAllAutoClickers() {
+    for (const key in autoClickerIntervals) {
+      clearInterval(autoClickerIntervals[key]);
+    }
+    autoClickerIntervals = {};
+  }
+
+  function restartAutoClickers() {
+    if (ownedClasses.includes('босс')) startAutoClicker('босс', 3, 20000, "Ваши работники принесли 3 пиццакоина!");
+    if (ownedClasses.includes('пицца-ниндзя')) startAutoClicker('пицца-ниндзя', 5, 1000, "Пицца-Ниндзя украл 5 монет!", 0.1);
+    if (ownedClasses.includes('кулинарный маг')) startAutoClicker('кулинарный маг', 5, 15000, "Кулинарный Маг создал 5 монет!");
+    if (ownedClasses.includes('дракон пиццы')) startAutoClicker('дракон пиццы', 1, 1000, null);
+  }
+
+  function showEventNotification(text) {
+    const notification = document.createElement('div');
+    notification.className = 'event-notification';
+    notification.textContent = text;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 5000);
+  }
+
+  // =====================
+  // ОРИГИНАЛЬНЫЕ ФУНКЦИИ
+  // =====================
+
+  // Универсальный автокликер
+  function startAutoClicker(className, amount, interval, message, chance = 1) {
+    if (autoClickerIntervals[className]) clearInterval(autoClickerIntervals[className]);
+    autoClickerIntervals[className] = setInterval(() => {
+      if (!autoClickersDisabled && Math.random() < chance) {
+        coins += amount;
+        if (message) showMessage(message);
+        updateDisplay();
+      }
+    }, interval);
+  }
+
+  // Функции битвы
+  function startBattle() {
+    if (!ownedClasses.includes('босс') && !ownedClasses.includes('король') && 
+        !ownedClasses.includes('пицца-ниндзя') && !ownedClasses.includes('кулинарный маг')) {
+      showMessage("Нужен боевой класс (Босс/Король/Ниндзя/Маг)!");
+      return;
+    }
+
+    // Выбор врага
+    let enemy;
+    const isKing = ownedClasses.includes('король');
+    
+    if (isKing && Math.random() < 0.1) {
+      enemy = enemies[2]; // Кракен-Кальмар
+    } else if (Math.random() < 0.3) {
+      enemy = enemies[1]; // Суши-Робот
+    } else {
+      enemy = enemies[0]; // Бургер-Гангстер
+    }
+    
+    currentEnemy = enemy.name;
+    battleEnemyHealth = enemy.hp;
+    enemyAttackInterval = 3000 - (ownedClasses.includes('фуд-критик') ? 500 : 0);
+    
+    startBattleLogic();
+  }
+  
+  function startBattleLogic() {
+    isBattleActive = true;
+    battleHealth = 100;
+    
+    const battleUI = document.createElement('div');
+    battleUI.id = 'battleUI';
+    battleUI.innerHTML = `
+      <h2>БИТВА С ${currentEnemy.toUpperCase()}!</h2>
+      <div style="display: flex; justify-content: space-between; margin: 20px 0">
+        <div>
+          <div>ВАШЕ ЗДОРОВЬЕ: <span id="playerHealth">100</span></div>
+          <div class="health-bar-container">
+            <div id="playerHealthBar" class="health-bar" style="width: 100%"></div>
+          </div>
+        </div>
+        <div>
+          <div>${currentEnemy.toUpperCase()}: <span id="enemyHealth">${battleEnemyHealth}</span></div>
+          <div class="health-bar-container">
+            <div id="enemyHealthBar" class="health-bar" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+      <button id="attackBtn">АТАКОВАТЬ</button>
+      <button id="healBtn">ЛЕЧИТЬСЯ</button>
+      <div id="battleLog"></div>
+    `;
+    
+    document.body.appendChild(battleUI);
+    playSound(battleSound);
+    
+    document.getElementById('attackBtn').addEventListener('mousedown', startCharge);
+    document.getElementById('healBtn').addEventListener('mousedown', startCharge);
+
+    battleInterval = setInterval(enemyAttack, enemyAttackInterval);
+  }
+
+  let chargeState = {
+      isCharging: false,
+      button: null,
+      charge: 1,
+      interval: null
+  };
+  
+  function startCharge(e) {
+      if (chargeState.isCharging) return;
+      
+      chargeState.isCharging = true;
+      chargeState.button = e.target;
+      chargeState.charge = 1;
+      
+      chargeState.button.classList.add('charge-animation');
+
+      chargeState.interval = setInterval(() => {
+          chargeState.charge = Math.min(chargeState.charge + 0.1, 2.5);
+      }, 100);
+
+      const endCharge = () => {
+          if (!chargeState.isCharging) return;
+          clearInterval(chargeState.interval);
+          chargeState.isCharging = false;
+          chargeState.button.classList.remove('charge-animation');
+          
+          if (chargeState.button.id === 'attackBtn') {
+              executeAttack(chargeState.charge);
+          } else {
+              executeHeal(chargeState.charge);
+          }
+
+          document.removeEventListener('mouseup', endCharge);
+      };
+
+      document.addEventListener('mouseup', endCharge);
+  }
+
+  function executeAttack(charge) {
+    if (!isBattleActive) return;
+    
+    let damage = 30;
+    let isCriticalHit = Math.random() < 0.2;
+    
+    if (ownedClasses.includes('пицца-ниндзя') && Math.random() < 0.3) {
+      addBattleLog("Пицца-Ниндзя уклонился от атаки!", "#55ff55");
+      return;
+    }
+    
+    damage = Math.round(damage * charge);
+    if (isCriticalHit) {
+      damage = Math.round(damage * 1.5);
+      addBattleLog("КРИТИЧЕСКИЙ УДАР!", "#ffcc00");
+      createBattleEffect("CRITICAL!", "#ffcc00", "enemyHealth");
+    }
+    
+    const enemy = enemies.find(e => e.name === currentEnemy);
+    if (enemy && enemy.weakness && ownedClasses.includes(enemy.weakness)) {
+      damage = Math.round(damage * 2);
+      addBattleLog(`Эффективно! (${enemy.weakness.toUpperCase()} — слабость ${currentEnemy})`, "#55ff55");
+    }
+    
+    battleEnemyHealth -= damage;
+    if (battleEnemyHealth < 0) battleEnemyHealth = 0;
+    
+    updateBattleUI();
+    addBattleLog(`Вы атаковали и нанесли ${damage} урона!`, "#ff5555");
+    createBattleEffect(`-${damage}`, "#ff5555", "enemyHealth");
+    
+    if (battleEnemyHealth <= 0) {
+      winBattle();
+    }
+  }
+
+  function executeHeal(charge) {
+    if (!isBattleActive) return;
+    
+    let heal = Math.round(20 * charge);
+    battleHealth += heal;
+    if (battleHealth > 100) battleHealth = 100;
+    
+    updateBattleUI();
+    addBattleLog(`Вы восстановили ${heal} здоровья!`, "#55ff55");
+    createBattleEffect(`+${heal}`, "#55ff55", "playerHealth");
+  }
+
+  function enemyAttack() {
+    if (!isBattleActive) return;
+    
+    const enemy = enemies.find(e => e.name === currentEnemy);
+    let damage = 10 + Math.floor(Math.random() * 20);
+    
+    const attackPhrases = [
+      `${currentEnemy} атаковал ${enemy.attack} и нанес ${damage} урона!`,
+      `${currentEnemy} ударил ${enemy.attack} (${damage} урона)!`,
+      `Атака ${currentEnemy}: ${damage} урона!`
+    ];
+    
+    battleHealth -= damage;
+    if (battleHealth < 0) battleHealth = 0;
+    
+    updateBattleUI();
+    addBattleLog(attackPhrases[Math.floor(Math.random() * attackPhrases.length)], "#ff5555");
+    createBattleEffect(`-${damage}`, "#ff5555", "playerHealth");
+    
+    if (battleHealth <= 0) {
+      loseBattle();
+    }
+  }
+
+  function createBattleEffect(text, color, target) {
+    const effect = document.createElement('div');
+    effect.className = 'battle-effect';
+    effect.textContent = text;
+    effect.style.color = color;
+    
+    const targetEl = document.getElementById(target);
+    const rect = targetEl.getBoundingClientRect();
+    const battleUIRect = document.getElementById('battleUI').getBoundingClientRect();
+    
+    effect.style.left = `${rect.left + rect.width / 2 - battleUIRect.left}px`;
+    effect.style.top = `${rect.top - battleUIRect.top}px`;
+    
+    document.getElementById('battleUI').appendChild(effect);
+    
+    setTimeout(() => effect.remove(), 1000);
+  }
+
+  function updateBattleUI() {
+    if (!isBattleActive) return;
+    
+    document.getElementById('playerHealth').textContent = battleHealth;
+    document.getElementById('enemyHealth').textContent = battleEnemyHealth;
+    document.getElementById('playerHealthBar').style.width = `${battleHealth}%`;
+    document.getElementById('enemyHealthBar').style.width = `${battleEnemyHealth / (enemies.find(e => e.name === currentEnemy).hp) * 100}%`;
+  }
+
+  function addBattleLog(message, color) {
+    const log = document.getElementById('battleLog');
+    const entry = document.createElement('div');
+    entry.textContent = message;
+    entry.style.color = color || '#fff';
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function winBattle() {
+    clearInterval(battleInterval);
+    isBattleActive = false;
+    addBattleLog(`ПОБЕДА! Вы победили ${currentEnemy}!`, "#ffcc00");
+    playSound(winSound);
+    
+    const reward = battleRewards[currentEnemy] || 150;
+    coins += reward;
+    updateDisplay();
+    
+    setTimeout(() => {
+      document.getElementById('battleUI')?.remove();
+      showMessage(`Вы получили ${reward} пиццакоинов за победу!`);
+    }, 3000);
+  }
+
+  function loseBattle() {
+    clearInterval(battleInterval);
+    isBattleActive = false;
+    addBattleLog(`ПОРАЖЕНИЕ! ${currentEnemy} победил...`, "#ff5555");
+    
+    let penalty = 50;
+    const enemy = enemies.find(e => e.name === currentEnemy);
+    if (enemy) {
+      penalty = enemy.hp / 3;
+    }
+    
+    setTimeout(() => {
+      document.getElementById('battleUI')?.remove();
+      showMessage(`${currentEnemy} украл ${Math.round(penalty)} пиццакоинов...`);
+      coins = Math.max(0, coins - Math.round(penalty));
+      updateDisplay();
+    }, 3000);
+  }
+
+  // Вспомогательные функции
+  function showMessage(text) {
+    messageEl.textContent = text;
+    setTimeout(() => messageEl.textContent = '', 3000);
+  }
+
+  function updateDisplay() {
+    coinsEl.textContent = coins;
+    document.body.classList.toggle('has-boss', ownedClasses.includes('босс'));
+    document.body.classList.toggle('has-king', ownedClasses.includes('король'));
+    updateShopButtons();
+    updateOwnedClasses();
+    updateSecretRoles();
+    saveData();
+  }
+
+  function updateShopButtons() {
+    shopButtons.forEach(button => {
+      const price = parseInt(button.dataset.price);
+      const className = button.dataset.class;
+      if (ownedClasses.includes(className)) {
+        button.textContent = 'Куплено';
+        button.disabled = true;
+      } else if (coins < price) {
+        button.disabled = true;
+      } else {
+        button.disabled = false;
+        button.textContent = 'Купить';
+      }
+    });
+  }
+
+  function updateOwnedClasses() {
+    ownedEl.textContent = ownedClasses.length ? ownedClasses.join(', ') : 'нет';
+  }
+
+  function updateSecretRoles() {
+    secretRolesEl.textContent = secretRoles.length ? secretRoles.join(', ') : 'нет';
+  }
+
+  // Обработчики событий
+  btn.addEventListener('click', () => {
+    let coinGain = 1;
+    
+    if (ownedClasses.includes('пицца-ниндзя') && Math.random() < 0.1) {
+      coinGain = 5;
+      showMessage("Пицца-Ниндзя помог заработать больше!");
+    }
+    
+    coins += coinGain;
+    updateDisplay();
+    playSound(currentClickSound);
+  });
+
+  shopButtons.forEach(button => {
+    button.addEventListener('click', (e) => {
+      const price = parseInt(e.target.dataset.price);
+      const className = e.target.dataset.class;
+      
+      if (coins >= price && !ownedClasses.includes(className)) {
+        coins -= price;
+        ownedClasses.push(className);
+        
+        if (className === 'босс') startAutoClicker('босс', 3, 20000, "Ваши работники принесли 3 пиццакоина!");
+        if (className === 'пицца-ниндзя') startAutoClicker('пицца-ниндзя', 5, 1000, "Пицца-Ниндзя украл 5 монет!", 0.1);
+        if (className === 'кулинарный маг') startAutoClicker('кулинарный маг', 5, 15000, "Кулинарный Маг создал 5 монет!");
+        if (className === 'фуд-критик') showMessage("Теперь враги атакуют медленнее!");
+        
+        updateDisplay();
+        playSound(currentClickSound);
+      }
+    });
+  });
+
+  battleButton.addEventListener('click', startBattle);
+
+  // Система сохранения/загрузки
+  saveBtn.addEventListener('click', () => {
+    const saveDataObj = { coins, ownedClasses, secretRoles, usedCodes };
+    const jsonString = JSON.stringify(saveDataObj);
+    const saveCode = encode(jsonString);
+    saveCodeArea.value = saveCode;
+    saveModal.style.display = 'flex';
+  });
+
+  loadBtn.addEventListener('click', () => {
+    loadModal.style.display = 'flex';
+  });
+
+  closeSaveModalBtn.addEventListener('click', () => {
+    saveModal.style.display = 'none';
+  });
+
+  closeLoadModalBtn.addEventListener('click', () => {
+    loadModal.style.display = 'none';
+  });
+  
+  copySaveCodeBtn.addEventListener('click', () => {
+      saveCodeArea.select();
+      document.execCommand('copy');
+      showMessage("Код скопирован!");
+  });
+
+  applyLoadCodeBtn.addEventListener('click', () => {
+    const loadCode = loadCodeInput.value.trim();
+    if (loadCode) {
+      const jsonString = decode(loadCode);
+      if (jsonString) {
+        try {
+          const loadedData = JSON.parse(jsonString);
+          if (loadedData.coins !== undefined && loadedData.ownedClasses !== undefined) {
+            coins = loadedData.coins;
+            ownedClasses = loadedData.ownedClasses;
+            secretRoles = loadedData.secretRoles;
+            usedCodes = loadedData.usedCodes;
+            
+            clearAllAutoClickers();
+            restartAutoClickers();
+            
+            updateDisplay();
+            showMessage("Прогресс успешно загружен!");
+            loadModal.style.display = 'none';
+          } else {
+            showMessage("Некорректный код сохранения.");
+          }
+        } catch (e) {
+          console.error("Ошибка парсинга JSON", e);
+          showMessage("Некорректный код сохранения.");
+        }
+      } else {
+        showMessage("Некорректный код сохранения.");
+      }
+    } else {
+      showMessage("Поле не может быть пустым.");
+    }
+  });
+
+
+  // Секретные коды
+  const codes = {
+    'FREE100': () => {
+      coins += 100;
+      messageEl.textContent = 'Вы получили 100 пиццакоинов!';
+    },
+    'ADMINROLE': () => {
+      if (!secretRoles.includes('админ')) {
+        secretRoles.push('админ');
+        messageEl.textContent = 'Вам присвоена роль "админ"!';
+      }
+    },
+    'OVERLORD': () => {
+      if (!secretRoles.includes('сверхвладыка')) {
+        secretRoles.push('сверхвладыка');
+        messageEl.textContent = 'Вы — Сверхвладыка!';
+      }
+    },
+    'PEPPERONI': () => {
+      coins += 50;
+      const randomClasses = ['повар', 'кассир', 'доставщик'];
+      const randomClass = randomClasses[Math.floor(Math.random() * randomClasses.length)];
+      if (!ownedClasses.includes(randomClass)) {
+        ownedClasses.push(randomClass);
+      }
+      messageEl.textContent = `Вы получили 50 монет и класс ${randomClass}!`;
+    },
+    'GARLICBREAD': () => {
+      if (!secretRoles.includes('чесночный хлеб')) {
+        secretRoles.push('чесночный хлеб');
+        messageEl.textContent = 'Вы разблокировали скрытую кнопку!';
+      }
+    },
+    'CHEESY': () => {
+      document.body.classList.add('cheesy-mode');
+      messageEl.textContent = 'Режим сыра активирован!';
+    },
+    'MAMMA MIA': () => {
+      currentClickSound = luigiSound;
+      messageEl.textContent = 'Теперь звуки кликов — это Луиджи!';
+    },
+    'HOTSAUCE': () => {
+      if (!ownedClasses.includes('дракон пиццы')) {
+        ownedClasses.push('дракон пиццы');
+        messageEl.textContent = 'Вы разблокировали Дракона Пиццы!';
+        startAutoClicker('дракон пиццы', 1, 1000);
+      }
+    },
+    'INSPECTME': () => {
+      coins += 500;
+      messageEl.textContent = 'Вы нашли скрытый код в консоли! +500 монет!';
+    },
+    'CATS': () => {
+      document.getElementById('luckyCat').style.display = 'block';
+      luckyCatActive = true;
+      startLuckyCatTimer();
+      messageEl.textContent = 'Кот удачи теперь с вами! Он приносит монеты каждые 5 минут.';
+    }
+  };
+
+  codeSubmit.addEventListener('click', () => {
+    const code = codeInput.value.trim().toUpperCase();
+    
+    if (usedCodes.includes(code)) {
+      messageEl.textContent = 'Код уже использован!';
+    } else if (codes[code]) {
+      codes[code]();
+      usedCodes.push(code);
+      updateDisplay();
+      playSound(currentClickSound);
+      codeInput.value = '';
+    } else {
+      messageEl.textContent = 'Неверный код!';
+    }
+  });
+
+  // Инициализация при загрузке
+  window.addEventListener('load', () => {
+    loadData();
+    
+    document.body.addEventListener('click', () => {
+      const bgMusic = document.getElementById('bgMusic');
+      bgMusic.volume = 0.3;
+      bgMusic.play().catch(e => console.log("Не удалось воспроизвести музыку:", e));
+    }, { once: true });
+    
+    restartAutoClickers();
+    setInterval(checkForEvents, 600000); 
+    updateDisplay();
+  });
+
+  document.getElementById('luckyCat').addEventListener('click', () => {
+    coins += 5;
+    showMessage("Вы погладили кота +5 монет!");
+    updateDisplay();
+    playSound(currentClickSound);
+  });
+
+  console.log("Секретный код: INSPECTME");
+</script>
+</body>
+</html>
