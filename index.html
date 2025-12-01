@@ -1,0 +1,1573 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>Гнев Пиццайоло: Dino Edition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --primary-color: #ffca28; --secondary-color: #ff6f00; --dark-bg: rgba(0,0,0,0.95);
+    --item-bg: #222; --accent-shadow: #ffca28; --hp-color: #4CAF50;
+    --tp-color: #4a90e2; --enemy-hp-color: #f44336; --rage-color: #e74c3c;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+  
+  body { 
+      margin: 0; padding: 0; 
+      background: url('https://i.imgur.com/4Nk4Ewd.jpg') no-repeat center center fixed; 
+      background-size: cover; 
+      font-family: 'Fredoka One', cursive, Arial, sans-serif; 
+      color: #fff; text-align: center; 
+      user-select: none; -webkit-user-select: none;
+      transition: filter 0.5s; padding-bottom: 150px; 
+      touch-action: manipulation;
+      overscroll-behavior: none;
+  }
+  .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--dark-bg); z-index: -1; }
+  
+  /* --- MAIN UI --- */
+  h1 { margin-top: 20px; font-size: 2.5em; text-shadow: 2px 2px 6px #000; }
+  #coins { color: var(--primary-color); transition: transform 0.2s; display: inline-block; }
+  .coin-pulse { transform: scale(1.5); }
+  
+  #addCoinBtn { 
+    position: relative; z-index: 100;
+    margin: 10px auto; padding: 20px 60px; font-size: 24px; 
+    background: linear-gradient(45deg, var(--secondary-color), var(--primary-color)); 
+    border: none; border-radius: 15px; box-shadow: 0 8px #cc5500; 
+    cursor: pointer; color: #000; font-weight: bold;
+    touch-action: none; /* CRITICAL: Disables browser gestures on button for multi-touch */
+    transition: transform 0.05s, box-shadow 0.05s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  #addCoinBtn:active { transform: translateY(4px); box-shadow: 0 2px #cc5500; }
+
+  /* --- NPC & HEADER --- */
+  .npc-avatar {
+    width: 80px; height: 80px; border-radius: 50%; border: 3px solid #fff;
+    background: #555; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 40px; cursor: pointer; box-shadow: 0 0 15px var(--primary-color);
+    transition: transform 0.2s; position: relative; z-index: 50;
+  }
+  .npc-avatar:hover { transform: scale(1.1); }
+  .npc-quest-mark {
+      position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: red;
+      border-radius: 50%; border: 2px solid white; animation: pulse 1s infinite; display: none;
+  }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+  
+  .top-bar { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 10px; position: relative; z-index: 50; }
+
+  /* --- CAT HOUSE --- */
+  #catHouse {
+      display: none; background: rgba(255, 255, 255, 0.1); border-radius: 15px;
+      padding: 15px; margin: 20px auto; max-width: 600px; border: 2px dashed #ffca28;
+  }
+  .cat-main { font-size: 4em; cursor: pointer; transition: 0.2s; display: inline-block; }
+  .cat-main:active { transform: scale(0.9) rotate(-10deg); }
+  .kittens-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
+  .kitten-card { 
+      background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 10px; 
+      font-size: 0.9em; display: flex; flex-direction: column; align-items: center;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border: 1px solid #555;
+  }
+  @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+  /* --- SHOP & PANELS --- */
+  .panel { max-width: 700px; margin: 0 auto 20px; background: rgba(0,0,0,0.8); border-radius: 15px; padding: 15px; border: 1px solid #444; }
+  
+  .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .item-card { 
+    background: var(--item-bg); border-radius: 8px; padding: 10px; 
+    border: 1px solid #444; display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .item-card h4 { margin: 5px 0; color: var(--primary-color); }
+  .item-card button { 
+    background: var(--primary-color); border: none; padding: 8px; 
+    border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px;
+  }
+  .item-card button:disabled { background: #555; cursor: not-allowed; }
+
+  /* --- BATTLE UI --- */
+  #battleModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111; z-index: 2000; flex-direction: column; }
+  #battleContainer { width: 100%; height: 100%; max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; padding: 10px; box-sizing: border-box; }
+  
+  .battle-header { display: flex; justify-content: space-between; padding: 10px; background: #222; border-radius: 10px; margin-bottom: 10px; }
+  .battle-field { flex-grow: 1; position: relative; display: flex; justify-content: space-between; align-items: center; padding: 20px; background: url('https://img.freepik.com/free-vector/restaurant-mural-wallpaper_23-2148706001.jpg') center/cover; border-radius: 10px; border: 2px solid #555; overflow: hidden; }
+  .battle-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 0; }
+  
+  /* PARTY & ENEMY */
+  .party-slots { display: flex; flex-direction: column; gap: 15px; z-index: 1; width: 35%; }
+  .enemy-slots { z-index: 1; width: 55%; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  
+  .char-card { 
+    background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; border-left: 5px solid #555; 
+    transition: 0.3s; position: relative; color: white; text-align: left;
+  }
+  .char-card.active { border-left-color: var(--primary-color); transform: translateX(20px); background: rgba(255, 202, 40, 0.2); }
+  .char-card.dead { opacity: 0.5; filter: grayscale(1); }
+  .char-card.rage { border-left-color: var(--rage-color); box-shadow: 0 0 20px var(--rage-color); animation: rage-pulse 1s infinite; }
+  .char-card.mounted { border-left-color: #2ecc71; box-shadow: 0 0 15px #2ecc71; border: 2px solid #2ecc71; }
+  
+  .enemy-card {
+    background: rgba(50,0,0,0.8); padding: 10px; border-radius: 8px; border: 2px solid transparent;
+    display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.2s; min-width: 100px;
+  }
+  .enemy-card.selected-target { border-color: red; box-shadow: 0 0 15px red; transform: scale(1.05); }
+  .enemy-card.rage { border-color: var(--rage-color); box-shadow: 0 0 20px var(--rage-color); animation: rage-pulse 0.5s infinite; }
+  .enemy-card.dead { display: none; }
+  .enemy-card.hostage { border-color: #3498db; animation: shake-hostage 2s infinite; }
+  .enemy-card.golden { border-color: gold; box-shadow: 0 0 20px gold; }
+  @keyframes shake-hostage { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } }
+
+  .hp-bar-bg { width: 100%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; margin-top: 5px; }
+  .hp-fill { height: 100%; background: var(--hp-color); width: 100%; transition: width 0.3s; }
+  
+  .enemy-sprite { font-size: 4em; filter: drop-shadow(0 0 5px black); }
+  
+  /* CONTROLS */
+  .battle-controls { height: 200px; background: #222; margin-top: 10px; border-radius: 10px; padding: 10px; display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+  .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .action-btn { border: none; border-radius: 5px; font-size: 1.1em; cursor: pointer; font-family: 'Fredoka One'; color: white; text-shadow: 1px 1px 0 #000; touch-action: manipulation; }
+  .btn-atk { background: #e74c3c; } .btn-skl { background: #9b59b6; }
+  .btn-def { background: #f39c12; } .btn-itm { background: #3498db; }
+  .btn-mount { background: #27ae60; border: 2px solid #fff; grid-column: 1 / -1; }
+  .action-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  
+  #battleLog { background: #111; padding: 10px; overflow-y: auto; font-size: 0.9em; text-align: left; color: #ccc; border-radius: 5px; font-family: monospace; }
+  
+  /* PIZZA NINJA GAME */
+  #ninjaModal { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; overflow: hidden; }
+  #ninjaCanvas { width: 100%; height: 100%; touch-action: none; }
+  .ninja-ui { position: absolute; top: 10px; left: 10px; font-size: 2em; text-shadow: 2px 2px 0 #000; pointer-events: none; }
+  .ninja-object { position: absolute; font-size: 4em; user-select: none; pointer-events: none; }
+  .slice-trail { position: absolute; height: 5px; background: white; border-radius: 5px; pointer-events: none; transform-origin: left center; box-shadow: 0 0 10px #fff; }
+
+  /* PARTY SELECT */
+  #partySelectModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; justify-content: center; align-items: center; }
+  .select-container { background: #222; padding: 20px; border-radius: 15px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; text-align: center; }
+  .select-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin: 20px 0; }
+  .select-item { background: #333; padding: 10px; border-radius: 5px; cursor: pointer; border: 2px solid transparent; }
+  .select-item.selected { border-color: var(--primary-color); background: #444; }
+
+  /* EFFECTS */
+  @keyframes rage-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+  .damage-popup { position: absolute; font-size: 2em; font-weight: bold; color: white; text-shadow: 2px 2px 0 #000; animation: floatUp 1s forwards; pointer-events: none; z-index: 9999; }
+  @keyframes floatUp { to { transform: translateY(-50px); opacity: 0; } }
+  .swoon-effect { animation: shake 0.5s; border: 5px solid red !important; }
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+  
+  .nav-btn { background: #444; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; touch-action: manipulation; }
+  .tutorial-highlight { border: 2px solid #f1c40f; box-shadow: 0 0 15px #f1c40f; }
+
+  /* ACH & MODALS */
+  .modal { display: none; position: fixed; z-index: 5000; inset: 0; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; }
+  .modal-box { background: #222; padding: 20px; border-radius: 10px; max-width: 500px; width: 90%; text-align: left; max-height: 80vh; overflow-y: auto; }
+  .ach-notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #2ecc71; padding: 10px 20px; border-radius: 20px; z-index: 6000; animation: slideDown 0.5s forwards; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+  @keyframes slideDown { from {top: -50px;} to {top: 20px;} }
+  
+  .input-code { padding: 10px; border-radius: 5px; border: none; width: 60%; }
+  .ach-item { padding: 10px; background: #333; margin-bottom: 5px; border-radius: 5px; opacity: 0.5; }
+  .ach-item.unlocked { opacity: 1; border-left: 4px solid var(--primary-color); }
+
+  .speech-bubble {
+    position: relative; background: #fff; color: #000; border-radius: .4em; padding: 10px; 
+    margin-bottom: 10px; font-size: 0.9em;
+  }
+  .speech-bubble:after {
+    content: ''; position: absolute; bottom: 0; left: 50%; width: 0; height: 0;
+    border: 10px solid transparent; border-top-color: #fff; border-bottom: 0;
+    margin-left: -10px; margin-bottom: -10px;
+  }
+
+  .quest-item { background: #444; padding: 10px; margin-bottom: 5px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+  .quest-item.completed { opacity: 0.6; border: 1px solid #0f0; }
+  .quest-reward { color: yellow; font-size: 0.8em; }
+  
+  /* PATHS MODAL */
+  .path-option { 
+    border: 2px solid #555; padding: 15px; margin: 10px 0; border-radius: 10px; cursor: pointer; transition: 0.2s;
+    display: flex; align-items: center; gap: 15px;
+  }
+  .path-option:hover { background: #333; border-color: #fff; }
+  .path-option.selected { border-color: var(--primary-color); background: rgba(255, 202, 40, 0.1); }
+  .path-icon { font-size: 2.5em; }
+
+  /* THEME 2009 */
+  .theme-2009 { font-family: 'Comic Sans MS', cursive, sans-serif !important; background: #00008b !important; color: #ffff00; }
+  .theme-2009 .panel, .theme-2009 .modal-box { border: 3px double #fff; background: #0000AA; }
+  .theme-2009 button { border: 2px outset #ccc; background: #ccc; color: black; border-radius: 0; }
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+
+<div class="overlay"></div>
+
+<!-- HEADER -->
+<h1 id="gameTitle">Гнев Пиццайоло</h1>
+
+<div class="top-bar">
+    <div class="npc-container" style="position: relative;">
+        <div class="npc-avatar" onclick="openNPC()">👨‍🍳</div>
+        <div id="npcQuestMark" class="npc-quest-mark"></div>
+        <div style="font-size: 0.8em; margin-top: 5px;">Бывший<br>Пиццайоло</div>
+    </div>
+    
+    <div>
+        <div>Пиццакоины: <span id="coins">0</span></div>
+        <button id="addCoinBtn">🍕 КЛИК 🍕</button>
+    </div>
+</div>
+
+<div id="activePathDisplay" style="color: var(--tp-color); font-size: 0.9em; margin-bottom: 10px; display:none;">
+    Путь: <span id="pathName">Нет</span>
+</div>
+
+<div style="margin-bottom: 20px;">
+  <button class="nav-btn" onclick="saveGame(true)">💾 Сохранить</button>
+  <button class="nav-btn" onclick="openAchievements()">🏆 Достижения</button>
+  <button class="nav-btn" style="background: #e74c3c;" onclick="startNinjaGame()">⚔️ Pizza Ninja</button>
+  <button class="nav-btn" style="background: #f1c40f; color: #000;" onclick="startTutorial()">❓ Туториал</button>
+</div>
+
+<div style="margin-bottom: 20px;">
+    <input type="text" id="codeInput" class="input-code" placeholder="Введите код (например: PIZZA)">
+    <button class="nav-btn" onclick="submitCode()">OK</button>
+    <button id="adminBtn" class="nav-btn" style="background: #c0392b; display:none;" onclick="openAdmin()">🔧 Админ</button>
+</div>
+
+<input type="file" id="modFileInput" style="display:none" accept=".pizzamod,.zip">
+<button class="nav-btn" style="background: #8e44ad; display:none;" onclick="document.getElementById('modFileInput').click()" id="modLoadBtn">📦 Моды</button>
+
+<!-- CAT HOUSE -->
+<div id="catHouse">
+    <h3>Дом Котика</h3>
+    <div style="display:flex; align-items:center; justify-content:center; gap:20px;">
+        <div class="cat-main" onclick="feedCat()">🐈</div>
+        <div style="text-align:left;">
+            <div>Сытость: <span id="catFed">0</span>/5</div>
+            <div>Котят: <span id="kittenCount">0</span></div>
+            <button class="nav-btn" style="background:#e67e22" onclick="feedCat()">🐟 Покормить (50 монет)</button>
+        </div>
+    </div>
+    
+    <div style="margin-top:15px; border-top:1px dashed #555; padding-top:5px;">
+        <small style="color:#aaa;">Ваши котята и бонусы:</small>
+        <div id="kittensList" class="kittens-container"></div>
+    </div>
+</div>
+
+<!-- SHOP SECTION -->
+<div class="panel">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h2>Магазин Классов</h2>
+    <button onclick="openPartySelect(false)" style="background: #e74c3c; color: white; border: none; padding: 10px 20px; font-size: 1.2em; border-radius: 8px; cursor: pointer;">⚔️ В БОЙ</button>
+  </div>
+  <p>Соберите 3 класса для битвы!</p>
+  <div id="shopList" class="shop-grid"></div>
+</div>
+
+<div class="panel">
+  <h2>Улучшение Классов</h2>
+  <p>Повышайте характеристики начальных классов</p>
+  <div id="upgradeList" class="shop-grid"></div>
+</div>
+
+<div class="panel">
+  <h2>Магазин Предметов</h2>
+  <div id="itemShopList" class="shop-grid"></div>
+</div>
+
+<!-- PARTY SELECT MODAL -->
+<div id="partySelectModal">
+  <div class="select-container">
+    <h2 id="partySelectTitle">Выберите 3 бойцов</h2>
+    <p id="partySelectDesc" style="color: #ccc;">Соберите команду для обычной битвы</p>
+    <div id="partyGrid" class="select-grid"></div>
+    <div style="display:flex; justify-content: space-between;">
+        <button class="nav-btn" onclick="document.getElementById('partySelectModal').style.display='none'">Отмена</button>
+        <button id="confirmBattleBtn" class="nav-btn" style="background: var(--hp-color);" onclick="confirmBattle()">НАЧАТЬ БИТВУ</button>
+    </div>
+  </div>
+</div>
+
+<!-- NPC MODAL -->
+<div id="npcModal" class="modal">
+    <div class="modal-box" style="text-align: center;">
+        <h3>Бывший Пиццайоло</h3>
+        <div class="speech-bubble" id="npcText">Привет! Я тут раньше всем заправлял.</div>
+        <div style="font-size: 4em;">👨‍🍳</div>
+        <div style="margin-top: 20px; display: grid; gap: 10px;">
+            <button class="nav-btn" style="background: #27ae60;" onclick="openQuests()">📜 Квесты</button>
+            <button class="nav-btn" onclick="npcTalk()">💬 Дай совет</button>
+            <button id="npcCatBtn" class="nav-btn" style="background: #e67e22; display:none;" onclick="npcAdoptCat()">🐈 Завести кота (500)</button>
+            <button id="npcHelpBtn" class="nav-btn" style="background: #9b59b6; display:none;" onclick="npcEnableHelp()">🆘 Попроси помощи в бою</button>
+            <button class="nav-btn" style="background: #3498db;" onclick="openPaths()">🔮 Выбрать Путь</button>
+            <button id="dinoBtn" class="nav-btn" style="background: #555; display:none; border:2px dashed #888;" onclick="startDinoBattle()">⏳ Портал в Мезозой</button>
+            <button class="nav-btn" style="background: #e67e22;" onclick="npcSparring()">🥊 Тренировочный бой</button>
+            <button class="nav-btn" style="background: #c0392b; border: 2px solid #fff;" onclick="startBossRushSetup()">☠️ ИСПЫТАНИЕ: BOSS RUSH</button>
+            <button id="storyBtn" class="nav-btn" style="background: #000; color: gold; border: 1px solid gold; display:none;" onclick="triggerEnding()">👁️ ИСТИНА</button>
+            <button class="nav-btn" onclick="document.getElementById('npcModal').style.display='none'">👋 Пока</button>
+        </div>
+    </div>
+</div>
+
+<!-- QUESTS MODAL -->
+<div id="questModal" class="modal">
+    <div class="modal-box">
+        <h3>Сюжетные Задания</h3>
+        <p>Выполняй задания чтобы продвигаться по сюжету и открыть новых боссов.</p>
+        <div id="questListContainer" style="max-height: 300px; overflow-y: auto;"></div>
+        <button class="nav-btn" style="margin-top:10px; width:100%" onclick="document.getElementById('questModal').style.display='none'">Закрыть</button>
+    </div>
+</div>
+
+<!-- PATHS MODAL -->
+<div id="pathsModal" class="modal">
+    <div class="modal-box">
+        <h3>Выбор Пути</h3>
+        <p>Выберите специализацию. Это усилит определенные классы и даст глобальные бонусы.</p>
+        
+        <div class="path-option" onclick="selectPath('warrior')">
+            <div class="path-icon">⚔️</div>
+            <div>
+                <b>Путь Воина</b><br>
+                <small>Все классы: Атака +20%<br>Уборщик: Атака +50%</small>
+            </div>
+        </div>
+        
+        <div class="path-option" onclick="selectPath('healer')">
+            <div class="path-icon">🥗</div>
+            <div>
+                <b>Путь Целителя</b><br>
+                <small>Все классы: HP +20%<br>Повар: Мега-хилл эффективнее</small>
+            </div>
+        </div>
+        
+        <div class="path-option" onclick="selectPath('wealth')">
+            <div class="path-icon">💰</div>
+            <div>
+                <b>Путь Богатства</b><br>
+                <small>Монеты +20%<br>Босс: Навык стоит на 10 TP меньше</small>
+            </div>
+        </div>
+
+        <div class="path-option" onclick="selectPath('tank')">
+            <div class="path-icon">🛡️</div>
+            <div>
+                <b>Путь Танка</b><br>
+                <small>Все классы: HP +50%<br>Защита (Defend) эффективнее в 2 раза</small>
+            </div>
+        </div>
+
+        <div class="path-option" onclick="selectPath('ninja')">
+            <div class="path-icon">💨</div>
+            <div>
+                <b>Путь Скорости</b><br>
+                <small>15% шанс уклонения от любой атаки<br>Пицца-Ниндзя: +50% Атака</small>
+            </div>
+        </div>
+
+        <div class="path-option" onclick="selectPath('mage')">
+            <div class="path-icon">✨</div>
+            <div>
+                <b>Путь Магии</b><br>
+                <small>Все навыки (Special) +30% Эффективность<br>Реген 5 TP каждый ход</small>
+            </div>
+        </div>
+
+        <button class="nav-btn" style="margin-top:10px; width:100%" onclick="document.getElementById('pathsModal').style.display='none'">Отмена</button>
+    </div>
+</div>
+
+<!-- ACHIEVEMENTS MODAL -->
+<div id="achievementsModal" class="modal">
+    <div class="modal-box">
+        <h3>Достижения</h3>
+        <div id="achList"></div>
+        <button class="nav-btn" style="margin-top: 10px;" onclick="document.getElementById('achievementsModal').style.display='none'">Закрыть</button>
+    </div>
+</div>
+
+<!-- ALIEN EVENT MODAL -->
+<div id="alienModal" class="modal" style="display:none; flex-direction: column;">
+    <div class="alien-text" style="color: #0f0; text-align: center;">
+        <h1 style="color: #0f0; text-shadow: 0 0 10px #0f0;">⚠️ ПОХИЩЕНИЕ! ⚠️</h1>
+        <p>Вас схватили инопланетяне!</p>
+        <p>Наберите 2000 макаронокоинов, чтобы сбежать.</p>
+        <p>Текущие макароны: <span id="macaroniCount">0</span>/2000</p>
+    </div>
+    <div id="macaroniBtn" onclick="clickMacaroni()" style="font-size: 100px; cursor: pointer;">🍝</div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div id="adminModal" class="modal">
+    <div class="modal-box">
+        <h3 style="color:red;">Админ Панель v2.0</h3>
+        
+        <div style="border: 1px solid #444; padding: 10px; margin-bottom: 10px;">
+            <h4>Читы</h4>
+            <button class="nav-btn" onclick="gameState.coins+=5000; updateUI();">💰 +5000 Монет</button>
+            <button class="nav-btn" onclick="unlockAllClasses()">🔓 Открыть все классы</button>
+            <button class="nav-btn" onclick="adminGodMode()">👼 Режим Бога (В бою)</button>
+            <button class="nav-btn" onclick="adminWinBattle()">⚔️ Выиграть бой</button>
+        </div>
+
+        <div style="border: 1px solid #444; padding: 10px; margin-bottom: 10px;">
+            <h4>Выдача Класса</h4>
+            <select id="adminClassSelect" style="width: 100%; padding: 5px; margin-bottom: 5px; background: #333; color: white;">
+                <!-- Options added via JS -->
+            </select>
+            <button class="nav-btn" onclick="adminGiveClass()">Выдать</button>
+        </div>
+        
+        <div style="border: 1px solid #444; padding: 10px; margin-bottom: 10px;">
+            <h4>Генератор Кодов</h4>
+            <input id="adminNewCode" placeholder="Название кода (напр. GIFT)" style="width:100%; margin-bottom:5px;">
+            <input id="adminCodeCoins" placeholder="Сумма монет" type="number" style="width:100%; margin-bottom:5px;">
+            <select id="adminCodeClass" style="width: 100%; padding: 5px; margin-bottom: 5px; background: #333; color: white;">
+                <option value="">-- Без класса --</option>
+            </select>
+            <button class="nav-btn" onclick="adminGenerateCode()">Создать Одноразовый Код</button>
+        </div>
+
+        <button class="nav-btn" onclick="triggerAlienEvent()">👽 Запустить Похищение</button>
+        <button class="nav-btn" onclick="resetGame()">🗑️ Сброс прогресса</button>
+        <button class="nav-btn" style="margin-top: 10px;" onclick="document.getElementById('adminModal').style.display='none'">Закрыть</button>
+    </div>
+</div>
+
+<!-- BATTLE UI -->
+<div id="battleModal">
+  <div id="battleContainer">
+    <div class="battle-header">
+      <div id="battleTitleText" style="font-size: 1.5em; color: var(--primary-color);">Битва</div>
+      <button class="nav-btn" style="background: #e74c3c;" onclick="exitBattle()">Сбежать</button>
+    </div>
+    
+    <div class="battle-field">
+      <div class="battle-overlay"></div>
+      
+      <!-- PLAYER SIDE -->
+      <div id="partySlots" class="party-slots"></div>
+      
+      <!-- ENEMY SIDE -->
+      <div id="enemySlots" class="enemy-slots"></div>
+    </div>
+    
+    <div class="battle-controls">
+      <div class="actions-grid">
+        <button id="btnAtk" class="action-btn btn-atk" onclick="playerAction('attack')">Атака</button>
+        <button id="btnSkl" class="action-btn btn-skl" onclick="playerAction('special')">Навык</button>
+        <button id="btnDef" class="action-btn btn-def" onclick="playerAction('defend')">Защита</button>
+        <button id="btnItm" class="action-btn btn-itm" onclick="playerAction('item')">Предмет</button>
+        
+        <!-- DYNAMIC MOUNT BUTTON -->
+        <button id="btnMount" class="action-btn btn-mount" style="display:none" onclick="playerAction('mount')">🦖 ОСЕДЛАТЬ</button>
+      </div>
+      <div style="display: flex; flex-direction: column;">
+        <div style="margin-bottom: 5px;">Ход: <span id="turnIndicator" style="color: var(--primary-color)">Игрок</span></div>
+        <div style="margin-bottom: 5px;">TP Отряда: <span id="tpText">0</span>/100</div>
+        <div class="hp-bar-bg"><div id="tpBar" class="hp-fill" style="background: var(--tp-color); width: 0%"></div></div>
+        <div id="battleLog"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NINJA GAME UI -->
+<div id="ninjaModal">
+    <div class="ninja-ui">
+        Очки: <span id="ninjaScore">0</span>
+    </div>
+    <div id="ninjaGameArea" style="position:absolute; width:100%; height:100%;"></div>
+    <div style="position: absolute; bottom: 20px; width: 100%; text-align: center;">
+        <button class="nav-btn" onclick="endNinjaGame()">Выход</button>
+    </div>
+</div>
+
+<!-- TUTORIAL MODAL -->
+<div id="tutorialModal" class="modal" style="display:none; position:fixed; z-index:5000; inset:0; background:rgba(0,0,0,0.85); justify-content:center; align-items:center;">
+    <div style="background:#fff; color:#000; padding:30px; border-radius:10px; max-width:500px; text-align:left;">
+        <h2 style="color:#000;">🍕 Обучение</h2>
+        <p>Привет, Пиццайоло! Мир изменился.</p>
+        <p>1. <b>Кликай</b> кнопку чтобы получить монеты. Заведи кота (код CATS) для помощи!</p>
+        <p>2. <b>Покупай классы</b>. Выбери Путь у НПС чтобы стать сильнее.</p>
+        <p>3. <b>Уровень битв</b> зависит от уровня твоих бойцов.</p>
+        <p>4. <b>Сюжетные Боссы</b>: Выполняй квесты, чтобы встретить их по порядку.</p>
+        <p>5. <b>ГНЕВ (SWOON)</b>. Когда боец остается один, он получает огромную силу!</p>
+        <p>6. <b>Спасение Рабов</b>. Не убивайте Пицца Раба! Убейте остальных, и он будет спасен.</p>
+        <button onclick="document.getElementById('tutorialModal').style.display='none'; checkAchievements()" style="margin-top:20px; padding:10px; background:green; color:white; border:none; cursor:pointer; width:100%; font-size:1.2em;">Понятно, в бой!</button>
+    </div>
+</div>
+
+<script>
+// ==========================================
+// DATA: FULL CONTENT
+// ==========================================
+
+const shopItems = [
+    { name: "пицца уборщик", price: 120, hp: 40, atk: 5, autoClick: 0, special: {name: "Генеральная Уборка", cost: 100, desc: "Мгновенно убирает обычного врага"} },
+    { name: "повар", price: 150, hp: 60, atk: 8, autoClick: 0, special: {name: "Мега-хилл", cost: 50, desc: "Полностью лечит себя"} },
+    { name: "кассир", price: 180, hp: 45, atk: 6, autoClick: {amount:1, interval:30000}, special: {name: "Быстрая сдача", cost: 15, desc: "Урон + Восстановление 10 TP"} },
+    { name: "доставщик", price: 200, hp: 55, atk: 12, autoClick: 0, special: {name: "Внезапный удар", cost: 30, desc: "Средний урон + Шанс оглушения"} },
+    { name: "соусье", price: 220, hp: 50, atk: 10, autoClick: 0, special: {name: "Острый соус", cost: 25, desc: "Урон + Поджог на 3 хода"} },
+    { name: "босс", price: 250, hp: 80, atk: 15, autoClick: {amount:3, interval:20000}, special: {name: "Мотивация", cost: 40, desc: "Восстанавливает 40 TP"} },
+    { name: "король пиццы", price: 300, hp: 100, atk: 18, autoClick: 0, special: {name: "Призыв сотрудника", cost: 60, desc: "Атака случайным классом"} },
+    { name: "фуд-критик", price: 400, hp: 40, atk: 5, autoClick: 0, special: {name: "Разгромный обзор", cost: 25, desc: "Снижает атаку врага на 30%"} },
+    { name: "пицца адвокат", price: 450, hp: 60, atk: 14, autoClick: 0, special: {name: "Возражение!", cost: 30, desc: "Урон + Высокий шанс оглушения"} },
+    { name: "пицца-ниндзя", price: 500, hp: 70, atk: 25, autoClick: {amount:5, interval:1000}, special: {name: "Тысяча разрезов", cost: 50, desc: "Массивный урон"} },
+    { name: "кулинарный маг", price: 600, hp: 50, atk: 30, autoClick: {amount:5, interval:15000}, special: {name: "Сырный метеор", cost: 40, desc: "Мощный магический урон"} },
+    { name: "охотник за пиццей", price: 700, hp: 85, atk: 22, autoClick: 0, special: {name: "Отравленная пицца", cost: 45, desc: "Сильный яд (3 хода)"} },
+    { name: "пицца бот", price: 800, hp: 120, atk: 20, autoClick: {amount:10, interval:10000}, special: {name: "Оптимизация", cost: 35, desc: "Лечит отряд + TP"} },
+    { name: "кондитер-берсерк", price: 900, hp: 90, atk: 40, autoClick: 0, special: {name: "Сахарный Раш", cost: 60, desc: "Огромный урон ценой своего HP"} },
+    { name: "пицца-бард", price: 1100, hp: 60, atk: 10, autoClick: 0, special: {name: "Бодрящая Песня", cost: 40, desc: "Повышает атаку отряда"} },
+    { name: "тесто-голем", price: 1200, hp: 200, atk: 15, autoClick: 0, special: {name: "Каменная Корочка", cost: 30, desc: "Снижает урон по себе"} },
+    { name: "инспектор качества", price: 1300, hp: 70, atk: 18, autoClick: 0, special: {name: "Акт о Несоответствии", cost: 35, desc: "Урон + Снижение защиты"} },
+    { name: "финансовый директор", price: 2000, hp: 60, atk: 10, autoClick: {amount:15, interval:25000}, special: {name: "Враждебное Поглощение", cost: 60, desc: "Урон + Кража монет"} },
+    
+    // NEW CLASSES
+    { name: "кибер-пекарь", price: 3000, hp: 150, atk: 30, autoClick: {amount: 20, interval: 8000}, special: {name: "Лазерная нарезка", cost: 55, desc: "Игнорирует защиту врага"} },
+    { name: "вампир-официант", price: 4000, hp: 100, atk: 25, autoClick: 0, special: {name: "Кровавый сок", cost: 40, desc: "Крадет HP у врага"} },
+    { name: "владыка времени", price: 5000, hp: 80, atk: 10, autoClick: 0, special: {name: "Перерыв", cost: 80, desc: "Оглушает всех врагов на 2 хода"} },
+    
+    // BEASTMASTER
+    { name: "повелитель зверей", price: 3500, hp: 90, atk: 15, autoClick: 0, special: {name: "Укрощение", cost: 40, desc: "Попытка приручить зверя или стан"} },
+
+    // SECRET CLASSES
+    { name: "курьер-призрак", price: 1500, hp: 50, atk: 35, autoClick: 0, special: {name: "Призрачная Доставка", cost: 50, desc: "Крит + Уворот"}, isSecret: true },
+    { name: "дракон пиццы", price: 999999, hp: 500, atk: 100, autoClick: {amount:100, interval:5000}, special: {name: "Огненное дыхание", cost: 70, desc: "Колоссальный урон по всем"}, isSecret: true },
+    { name: "пицца кратос", price: 10000, hp: 300, atk: 80, autoClick: 0, special: {name: "Гнев Спарты", cost: 80, desc: "Урон огнем и льдом"}, isSecret: true },
+    { name: "Пицца Раб", price: 999, hp: 50, atk: 5, autoClick: 0, special: {name: "Пицца Свободы", cost: 35, desc: "Лечит весь отряд"}, isSecret: true },
+    { name: "Звёздный Пиццайоло", price: 9999, hp: 250, atk: 60, autoClick: {amount:25, interval:10000}, special: {name: "Космическая приправа", cost: 50, desc: "Массовый урон + Стан"}, isSecret: true },
+    { name: "Крис", price: 0, hp: 150, atk: 30, autoClick: 0, special: {name: "Отвага", cost: 15, desc: "Защита + TP"}, isSecret: true },
+    { name: "Сьюзи", price: 0, hp: 200, atk: 40, autoClick: 0, special: {name: "Грубый выпад", cost: 40, desc: "Тяжелый удар"}, isSecret: true },
+    { name: "Ральзей", price: 0, hp: 120, atk: 20, autoClick: 0, special: {name: "Молитва", cost: 30, desc: "Лечение отряда"}, isSecret: true }
+];
+
+const items = [
+    { name: "Кусочек пиццы", price: 25, effect: "heal_50" },
+    { name: "Газировка", price: 30, effect: "tp_30" },
+    { name: "Пепперони", price: 50, effect: "buff_atk" },
+    { name: "Легендарная Скалка", price: 0, isSecret: true, desc: "СИЛА ПРЕДКОВ! (+50% Доход, +20% Атака)" },
+    { name: "Поводья Пиццазавра", price: 0, isSecret: true, desc: "Позволяет оседлать Пиццазавра в бою" }
+];
+
+// UPDATED QUESTS FOR STORY
+const quests = [
+    { id: 'q1', text: "Накопи 500 монет", reward: 200, check: (s) => s.coins >= 500 },
+    { id: 'q2', text: "Победи Кракена-Кальмара (Босс 1)", reward: 1000, check: (s) => (s.stats.bossesDefeated||[]).includes("Кракен-Кальмар") },
+    { id: 'q3', text: "Купи 3 класса и прокачай их", reward: 500, check: (s) => s.ownedClasses.length >= 3 && Object.values(s.classLevels).some(l=>l>=2) },
+    { id: 'q4', text: "Победи Автобус Клиентов (Босс 2)", reward: 1500, check: (s) => (s.stats.bossesDefeated||[]).includes("Автобус Клиентов") },
+    { id: 'q5', text: "Освободи Пицца Раба", reward: 800, check: (s) => s.ownedClasses.includes("Пицца Раб") },
+    { id: 'q6', text: "Победи Матку Аномалорони (Босс 3)", reward: 2000, check: (s) => (s.stats.bossesDefeated||[]).includes("Матка Аномалорони") },
+    { id: 'q7', text: "Победи Бургер Самурая (Босс 4)", reward: 3000, check: (s) => (s.stats.bossesDefeated||[]).includes("Бургер Самурай") },
+    { id: 'q8', text: "Победи Камуфляжного Бургера (Босс 5)", reward: 4000, check: (s) => (s.stats.bossesDefeated||[]).includes("Камуфляжный Бургер") },
+    { id: 'q9', text: "Выбери Путь у Пиццайоло", reward: 1000, check: (s) => s.chosenPath !== null },
+    { id: 'q10', text: "Победи Тень Гнева (ФИНАЛ)", reward: 10000, check: (s) => (s.stats.bossesDefeated||[]).includes("Тень Гнева (Босс)") }
+];
+
+const catBreeds = {
+    'tabby': { name: 'Рыжий', icon: '🐈', desc: '+2 монеты за клик' },
+    'siamese': { name: 'Сиамский', icon: '🐈‍⬛', desc: '5% Шанс крит. клика (x10)' },
+    'persian': { name: 'Персидский', icon: '☁️', desc: 'Авто-кликеры на 10% быстрее' },
+    'mainecoon': { name: 'Мейн-кун', icon: '🦁', desc: '+5% Атаки в бою' },
+    'sphynx': { name: 'Сфинкс', icon: '👽', desc: 'Скидка 2% в магазине' }
+};
+
+let enemies = [
+    { name: "Картошка-Фри", hp: 100, atk: 10, reward: 50, ai: "basic", sprite: "🍟", minLevel: 0 },
+    { name: "Мелкий Аномалорони", hp: 100, atk: 15, reward: 10, ai: "basic", sprite: "🐛", minLevel: 999 }, // Minion
+    { name: "Бургер-Гангстер", hp: 200, atk: 15, reward: 100, ai: "basic", sprite: "🍔", minLevel: 2 },
+    
+    // BOSS 1
+    { name: "Кракен-Кальмар", hp: 400, atk: 25, reward: 250, ai: "boss", sprite: "🦑", minLevel: 5 },
+    
+    { name: "Суши-Робот", hp: 300, atk: 20, reward: 150, ai: "healer", sprite: "🍣", minLevel: 8 },
+    { name: "Разгневанный клиент", hp: 350, atk: 30, reward: 120, ai: "basic", sprite: "😡", minLevel: 10 },
+    
+    // BOSS 2
+    { name: "Автобус Клиентов", hp: 900, atk: 40, reward: 500, ai: "bus", sprite: "🚌", minLevel: 12 },
+
+    { name: "Ананасовый Монстр", hp: 450, atk: 35, reward: 280, ai: "basic", sprite: "🍍", minLevel: 15 },
+    { name: "Робот-Морозильник", hp: 500, atk: 40, reward: 300, ai: "basic", sprite: "🤖", minLevel: 20 },
+    { name: "Золотая Крыса", hp: 100, atk: 0, reward: 5000, ai: "flee", sprite: "🐀", minLevel: 15 }, 
+
+    // BOSS 3
+    { name: "Матка Аномалорони", hp: 1000, atk: 50, reward: 700, ai: "matriarch", sprite: "🦐", minLevel: 25 },
+    
+    { name: "Пицца-Предатель", hp: 600, atk: 55, reward: 666, ai: "traitor", sprite: "🎭", minLevel: 28 },
+
+    // BOSS 4
+    { name: "Бургер Самурай", hp: 800, atk: 45, reward: 400, ai: "boss", sprite: "👹", minLevel: 30 },
+    
+    // BOSS 5
+    { name: "Камуфляжный Бургер", hp: 800, atk: 45, reward: 600, ai: "camo", sprite: "🍔", minLevel: 35 }, 
+
+    { name: "Королева Шарлотта", hp: 800, atk: 55, reward: 600, ai: "boss", sprite: "🧁", minLevel: 40 },
+    { name: "Меха-Печь 3000", hp: 1500, atk: 40, reward: 800, ai: "tank", sprite: "🤖", minLevel: 45 },
+    
+    // FINAL BOSS
+    { name: "Тень Гнева (Босс)", hp: 1200, atk: 60, reward: 1000, ai: "boss_swoon", sprite: "💀", minLevel: 50 },
+    
+    { name: "Манекен", hp: 9999, atk: 0, reward: 0, ai: "dummy", sprite: "🪵", minLevel: 0 },
+    { name: "Древнее Тесто", hp: 2000, atk: 20, reward: 2000, ai: "regen", sprite: "🥯", minLevel: 55 },
+
+    // SECRET BOSS
+    { name: "Доисторический Повар", hp: 3000, atk: 80, reward: 5000, ai: "pizzasaur", sprite: "🦖", minLevel: 60, fedCount: 0 }
+];
+
+const specialEnemies = {
+    god: { name: "Бургер Бог", hp: 5000, atk: 100, reward: 5000, ai: "boss_swoon", sprite: "👑" },
+    slave: { name: "Пицца Раб (Враг)", hp: 100, atk: 0, reward: 0, ai: "hostage", sprite: "🥺" }
+};
+
+const achievements = [
+    { id: 'first_coin', name: 'Первый заработок', desc: 'Кликните кнопку 1 раз' },
+    { id: 'rich', name: 'Богач', desc: 'Накопите 1000 монет' },
+    { id: 'squad', name: 'Команда мечты', desc: 'Купите 3 класса' },
+    { id: 'win_battle', name: 'Первая кровь', desc: 'Победите в бою' },
+    { id: 'rage_mode', name: 'Гнев Пиццайоло', desc: 'Выживите одним бойцом после Swoon' },
+    { id: 'full_shop', name: 'Полный магазин', desc: 'Купить все классы' },
+    { id: 'code_finder', name: 'Хакер', desc: 'Ввести 3 кода' },
+    { id: 'bot_master', name: 'Мастер ботов', desc: 'Купить Пицца Бота' },
+    { id: 'pizza_collector', name: 'Коллекционер', desc: 'Иметь много предметов' },
+    { id: 'cheesy_life', name: 'Сырная жизнь', desc: 'Активировать сырный код' },
+    { id: 'sweet_victory', name: 'Сладкая Победа', desc: 'Победить Королеву Шарлотту' },
+    { id: 'janitor_win', name: 'Чистота', desc: 'Победить Уборщиком' },
+    { id: 'samurai_duel', name: 'Дуэль чести', desc: 'Победить Самурая' },
+    { id: 'millionaire', name: 'Пицца-Магнат', desc: '1,000,000 монет' },
+    { id: 'unstoppable_force', name: 'Танк', desc: 'Купить Тесто-Голема' },
+    { id: 'ghost_in_the_pizzeria', name: 'Призрак', desc: 'Купить Курьера-Призрака' },
+    { id: 'abduction_survivor', name: 'Выживший', desc: 'Сбежать от пришельцев' },
+    { id: 'slave_freed', name: 'Свобода!', desc: 'Освободить Пицца Раба' },
+    { id: 'boss_rush_complete', name: 'Бог Битв', desc: 'Пройти Boss Rush' },
+    { id: 'cat_lover', name: 'Кошатник', desc: 'Завести 5 котят' },
+    { id: 'ninja_master', name: 'Мастер Клинка', desc: 'Набрать 200 очков в Pizza Ninja' },
+    { id: 'legend_found', name: 'Истина', desc: 'Найти легендарную скалку' },
+    { id: 'dino_tamer', name: 'Всадник', desc: 'Оседлать Пиццазавра' }
+];
+
+const secretCodes = {
+    'PIZZA': () => { gameState.coins += 100; alert('Код активирован: +100 монет'); },
+    'MONEY': () => { gameState.coins += 1000; alert('Код активирован: +1000 монет'); },
+    'RAGE': () => { alert('Гнев переполняет вас! (Пасхалка)'); },
+    'ADMIN': () => { document.getElementById('adminBtn').style.display = 'inline-block'; alert('Режим админа включен!'); },
+    'FREE100': () => { gameState.coins += 100; alert('+100 Монет!'); },
+    'PEPPERONI': () => { gameState.coins += 50; unlockClass('повар'); alert('+50 монет и Повар!'); },
+    'CHEESY': () => { document.body.style.filter = 'sepia(0.5) hue-rotate(-30deg)'; unlockAch('cheesy_life'); alert('Сырный режим!'); },
+    'MAMMA MIA': () => { alert('Mamma Mia! (Звук изменен)'); },
+    'DELTARUNE': () => { unlockClass('Крис'); unlockClass('Сьюзи'); unlockClass('Ральзей'); alert('Режим Дельтарун активирован!'); },
+    'ONEPLAYER': () => { alert('Вы и так один...'); },
+    '2009': () => { document.body.classList.add('theme-2009'); alert('Добро пожаловать в 2009!'); },
+    'MODERN': () => { document.body.classList.remove('theme-2009'); document.body.style.filter = ''; alert('Вернулись в наше время.'); },
+    'RETURN': () => { gameState.coins += gameState.ownedClasses.length * 100; gameState.ownedClasses = []; alert('Классы проданы.'); updateUI(); },
+    'FULLRESET': () => { resetGame(); },
+    'MOREMONEY': () => { gameState.coins += 1; alert('Вот тебе 1 монета.'); },
+    'POWERUP': () => { gameState.coins += 200; unlockClass('доставщик'); },
+    'EASTEREGG': () => { gameState.coins += 500; alert('Вы нашли пасхалку!'); },
+    'GODOFPIZZA': () => { unlockClass('пицца кратос'); alert('БОГ ПИЦЦЫ ПОЛУЧЕН'); },
+    'INGREDIENTS': () => { gameState.coins += 300; alert('Деньги на ингредиенты получены.'); },
+    'BIGMONEY': () => { gameState.coins += 1500; alert('Большие деньги!'); },
+    'GHOST': () => { unlockClass('курьер-призрак'); alert('Курьер-призрак получен'); },
+    'MASTERCHEF': () => { unlockClass('повар'); unlockClass('соусье'); alert('Набор Шефа выдан.'); },
+    'BATTLEMASTER': () => { gameState.inventory["Кусочек пиццы"] = (gameState.inventory["Кусочек пиццы"]||0) + 5; alert('Выдана провизия.'); },
+    'ALCHEMY': () => { unlockClass('кулинарный маг'); },
+    'CHEESEGUARD': () => { unlockClass('тесто-голем'); },
+    'ROCKETFUEL': () => { unlockClass('доставщик'); },
+    'PRESTIGE': () => { if(gameState.coins > 100000) { gameState.coins += 50000; alert('Престиж бонус!'); } else alert('Нужно 100к монет.'); },
+    'DINO': () => { if(gameState.ownedClasses.includes("повелитель зверей")) { document.getElementById('dinoBtn').style.display='inline-block'; alert("Портал открыт!"); } else alert("Нужен Повелитель Зверей!"); }
+};
+
+const npcTips = [
+    "Уровень врагов зависит от уровня твоей команды.",
+    "Пицца Раб находится в плену у Бургер-Гангстеров. Убей бандитов, но не трогай Раба!",
+    "Бургер Бог - секретный босс. Он появится только если у тебя есть Пицца Кратос.",
+    "Выполняй Квесты, чтобы узнать правду об этом месте...",
+    "Кракен - первый настоящий босс. Будь осторожен.",
+    "Автобус Клиентов может мгновенно переехать твоего бойца!",
+    "Камуфляжный бургер притворяется слабым, но это ловушка."
+];
+
+let gameState = {
+    coins: 0, ownedClasses: [], classLevels: {}, inventory: {},
+    autoClickers: {}, unlockedAchievements: [], usedCodes: [],
+    generatedOneTimeCodes: {}, npcHelperActive: false,
+    cats: { count: 0, fed: 0, list: [] }, catActive: false, chosenPath: null,
+    stats: { battlesWon: 0, bossesDefeated: [] },
+    completedQuests: [], storyFinished: false
+};
+
+let battle = {
+    active: false, turn: 0, tp: 0, activeCharIdx: 0, 
+    party: [], enemyParty: [],
+    rageMode: false, swoonTriggered: false, targetIdx: 0,
+    isBossRush: false, bossRushQueue: [], godMode: false,
+    pizzasaurFed: 0 // Track feeding for taming
+};
+
+let ninja = { active: false, score: 0, interval: null, elements: [] };
+let alienEvent = { active: false, macaroni: 0 };
+
+window.onload = () => {
+    loadGame();
+    if(gameState.ownedClasses.length === 0) startTutorial();
+    renderShop(); renderUpgrades(); renderItems(); startAutoClickers();
+    checkAchievements(); updateCatHouse(); updatePathDisplay(); populateAdminSelects();
+    updateQuestMarker();
+    
+    if(gameState.ownedClasses.includes("повелитель зверей")) document.getElementById('dinoBtn').style.display = 'inline-block';
+
+    // MULTI-TOUCH BUTTON HANDLER
+    const btn = document.getElementById('addCoinBtn');
+    btn.addEventListener('pointerdown', (e) => {
+        // Prevent default actions like scrolling/zooming/highlighting
+        e.preventDefault(); 
+        
+        let gain = 1 + (gameState.ownedClasses.length);
+        if(gameState.chosenPath === 'wealth') gain = Math.floor(gain * 1.2);
+        
+        // Cat buffs (Tabby)
+        const tabbyCount = (gameState.cats.list || []).filter(c => c === 'tabby').length;
+        gain += tabbyCount * 2;
+        
+        // Legendary Item Buff
+        if((gameState.inventory["Легендарная Скалка"]||0) > 0) gain = Math.floor(gain * 1.5);
+
+        // Cat buff (Siamese Crit)
+        const siameseCount = (gameState.cats.list || []).filter(c => c === 'siamese').length;
+        if(siameseCount > 0 && Math.random() < 0.05 * siameseCount) {
+            gain *= 10;
+            showDamage(e.clientX, e.clientY - 20, `CRIT!`, "orange");
+        }
+
+        gain += (gameState.cats.count || 0);
+        gameState.coins += gain; updateUI();
+        
+        // Handle coordinates for visual effect (fallback for weird touch events)
+        let x = e.clientX || 0;
+        let y = e.clientY || 0;
+        if (x === 0 && y === 0) {
+            const rect = btn.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+
+        showDamage(x, y, `+${gain}`, "gold");
+        
+        // Button visual feedback manually since :active might be tricky with preventDefault
+        btn.style.transform = 'translateY(4px)';
+        btn.style.boxShadow = '0 2px #cc5500';
+        setTimeout(() => {
+             btn.style.transform = '';
+             btn.style.boxShadow = '';
+        }, 50);
+
+        checkAchievements();
+        
+        // Alien Event Logic: Requires 9 classes, all at least level 5
+        const highLevelCount = gameState.ownedClasses.filter(c => (gameState.classLevels[c]||1) >= 5).length;
+        if(gameState.ownedClasses.length >= 9 && highLevelCount >= 9 && Math.random() < 0.002 && !gameState.ownedClasses.includes("Звёздный Пиццайоло")) triggerAlienEvent();
+    });
+};
+
+function updateUI() {
+    document.getElementById('coins').textContent = gameState.coins;
+    renderShop(); renderUpgrades(); renderItems();
+    saveGame();
+}
+
+function startTutorial() { document.getElementById('tutorialModal').style.display = 'flex'; }
+function unlockClass(name) { if(!gameState.ownedClasses.includes(name)) { gameState.ownedClasses.push(name); gameState.classLevels[name] = 1; updateUI(); } }
+function populateAdminSelects() {
+    const classSelect = document.getElementById('adminClassSelect');
+    const codeSelect = document.getElementById('adminCodeClass');
+    shopItems.forEach(i => {
+        const opt = document.createElement('option');
+        opt.value = i.name; opt.textContent = i.name;
+        classSelect.appendChild(opt.cloneNode(true));
+        codeSelect.appendChild(opt);
+    });
+}
+function adminGiveClass() { unlockClass(document.getElementById('adminClassSelect').value); alert('Выдан!'); }
+function adminGenerateCode() {
+    const name = document.getElementById('adminNewCode').value.toUpperCase().trim();
+    if(!name) { alert("Имя кода?"); return; }
+    gameState.generatedOneTimeCodes[name] = { 
+        coins: parseInt(document.getElementById('adminCodeCoins').value)||0, 
+        class: document.getElementById('adminCodeClass').value, used: false 
+    };
+    alert(`Код ${name} создан!`); updateUI();
+}
+function adminGodMode() { battle.godMode = !battle.godMode; alert(`God Mode: ${battle.godMode ? "ON" : "OFF"}`); }
+function adminWinBattle() { if(battle.active) { battle.enemyParty.forEach(e => { if(e.ai!=='hostage') e.hp = 0; }); checkWinCondition(); } }
+
+function openNPC() { 
+    document.getElementById('npcModal').style.display = 'flex'; 
+    if(gameState.unlockedAchievements.length < 5) {
+        document.getElementById('npcHelpBtn').style.display = 'inline-block';
+        document.getElementById('npcHelpBtn').textContent = gameState.npcHelperActive ? "✅ Помощь активна" : "🆘 Попроси помощи в бою";
+    }
+    const catBtn = document.getElementById('npcCatBtn');
+    catBtn.style.display = gameState.catActive ? 'none' : 'inline-block';
+    
+    if(gameState.ownedClasses.includes("повелитель зверей")) document.getElementById('dinoBtn').style.display = 'inline-block';
+
+    // Story Button
+    if(gameState.completedQuests.includes('q10') && !gameState.storyFinished) {
+        document.getElementById('storyBtn').style.display = 'inline-block';
+        document.getElementById('npcText').textContent = "...Нам нужно поговорить.";
+    } else {
+        document.getElementById('storyBtn').style.display = 'none';
+        npcTalk(); 
+    }
+}
+function npcTalk() { document.getElementById('npcText').textContent = npcTips[Math.floor(Math.random() * npcTips.length)]; }
+function npcSparring() {
+    document.getElementById('npcModal').style.display = 'none';
+    if(gameState.ownedClasses.length < 3) { alert("Вам нужно 3 бойца!"); return; }
+    openPartySelect(false); window.isSparring = true;
+}
+function startDinoBattle() {
+    document.getElementById('npcModal').style.display = 'none';
+    if(gameState.ownedClasses.length < 3) { alert("Вам нужно 3 бойца!"); return; }
+    openPartySelect(false); window.isDinoTime = true;
+}
+function npcEnableHelp() { gameState.npcHelperActive = !gameState.npcHelperActive; openNPC(); }
+function npcAdoptCat() {
+    if(gameState.coins >= 500) { gameState.coins -= 500; gameState.catActive = true; updateUI(); updateCatHouse(); openNPC(); alert("Кот у вас!"); } 
+    else alert("Нужно 500 монет.");
+}
+function openPaths() { 
+    if(!(gameState.stats.bossesDefeated||[]).includes("Бургер Самурай")) {
+        alert("Этот путь откроется только тому, кто одолел Бургер Самурая (Босс 4).");
+        return;
+    }
+    document.getElementById('npcModal').style.display = 'none'; 
+    document.getElementById('pathsModal').style.display = 'flex'; 
+}
+function selectPath(path) { gameState.chosenPath = path; updatePathDisplay(); document.getElementById('pathsModal').style.display = 'none'; alert("Путь выбран!"); updateUI(); }
+function updatePathDisplay() {
+    const el = document.getElementById('activePathDisplay');
+    const txt = document.getElementById('pathName');
+    if(gameState.chosenPath) {
+        el.style.display = 'block';
+        const map = { warrior: "Воина", healer: "Целителя", wealth: "Богатства", tank: "Танка", ninja: "Скорости", mage: "Магии" };
+        txt.textContent = map[gameState.chosenPath];
+    }
+}
+function feedCat() {
+    if(gameState.coins >= 50) {
+        gameState.coins -= 50; gameState.cats.fed = (gameState.cats.fed || 0) + 1;
+        if(gameState.cats.fed >= 5) {
+            gameState.cats.fed = 0; gameState.cats.count = (gameState.cats.count || 0) + 1;
+            
+            // Breed Logic
+            const breeds = Object.keys(catBreeds);
+            const breedKey = breeds[Math.floor(Math.random() * breeds.length)];
+            if (!gameState.cats.list) gameState.cats.list = [];
+            gameState.cats.list.push(breedKey);
+            const breedName = catBreeds[breedKey].name;
+
+            alert(`Родился котенок породы: ${breedName}!\nБонус: ${catBreeds[breedKey].desc}`); 
+            if(gameState.cats.count >= 5) unlockAch('cat_lover');
+        }
+        updateUI(); updateCatHouse();
+    } else alert("Мало монет!");
+}
+function updateCatHouse() {
+    if(gameState.catActive || gameState.usedCodes.includes('CATS')) {
+        document.getElementById('catHouse').style.display = 'block';
+        document.getElementById('catFed').textContent = gameState.cats.fed || 0;
+        document.getElementById('kittenCount').textContent = gameState.cats.count || 0;
+        const list = document.getElementById('kittensList'); list.innerHTML = '';
+        
+        (gameState.cats.list || []).forEach(breedKey => {
+            const breed = catBreeds[breedKey] || {icon:'🐈', name:'Обычный', desc:''};
+            const div = document.createElement('div'); 
+            div.className = 'kitten-card';
+            div.innerHTML = `<span style="font-size:1.5em">${breed.icon}</span><small>${breed.name}</small>`;
+            div.title = breed.desc;
+            list.appendChild(div);
+        });
+        
+    } else document.getElementById('catHouse').style.display = 'none';
+}
+function checkAchievements() {
+    if(gameState.coins >= 1 && !hasAch('first_coin')) unlockAch('first_coin');
+    if(gameState.coins >= 1000 && !hasAch('rich')) unlockAch('rich');
+    if(gameState.ownedClasses.length >= 3 && !hasAch('squad')) unlockAch('squad');
+}
+function hasAch(id) { return gameState.unlockedAchievements.includes(id); }
+function unlockAch(id) {
+    if(hasAch(id)) return;
+    gameState.unlockedAchievements.push(id);
+    const ach = achievements.find(a => a.id === id);
+    if (ach) {
+        const notif = document.createElement('div'); notif.className = 'ach-notification'; notif.textContent = `🏆 Достижение: ${ach.name}`;
+        document.body.appendChild(notif); setTimeout(() => notif.remove(), 3000);
+    } updateUI();
+}
+function openAchievements() {
+    const list = document.getElementById('achList'); list.innerHTML = '';
+    achievements.forEach(a => {
+        const div = document.createElement('div'); div.className = 'ach-item ' + (hasAch(a.id) ? 'unlocked' : '');
+        div.innerHTML = `<b>${a.name}</b><br><small>${a.desc}</small>`; list.appendChild(div);
+    });
+    document.getElementById('achievementsModal').style.display = 'flex';
+}
+function submitCode() {
+    const code = document.getElementById('codeInput').value.toUpperCase().trim();
+    if(gameState.generatedOneTimeCodes[code]) {
+        const data = gameState.generatedOneTimeCodes[code];
+        if(data.used) { alert("Код уже использован!"); return; }
+        data.used = true; gameState.coins += data.coins; if(data.class) unlockClass(data.class);
+        alert(`Код активирован!`); updateUI(); return;
+    }
+    if(secretCodes[code]) {
+        if(gameState.usedCodes.includes(code) && code !== 'ADMIN' && code !== 'CATS') { alert('Уже использовали.'); return; }
+        secretCodes[code](); if(code !== 'ADMIN') gameState.usedCodes.push(code); checkAchievements(); updateUI();
+    } else alert('Неверный код');
+}
+function openAdmin() { document.getElementById('adminModal').style.display = 'flex'; }
+function resetGame() { if(confirm("Сбросить прогресс?")) { localStorage.removeItem('pizzaSaveV5'); location.reload(); } }
+
+// QUESTS
+function openQuests() {
+    document.getElementById('npcModal').style.display = 'none';
+    const list = document.getElementById('questListContainer'); list.innerHTML = '';
+    quests.forEach(q => {
+        const completed = gameState.completedQuests.includes(q.id);
+        const div = document.createElement('div'); div.className = 'quest-item ' + (completed ? 'completed' : '');
+        div.innerHTML = `<div><b>${q.text}</b></div><div class="quest-reward">${q.reward} 💰</div>`;
+        if(!completed) {
+            const btn = document.createElement('button'); btn.className = 'nav-btn'; btn.style.background = '#27ae60'; btn.textContent = "Проверить";
+            btn.onclick = () => checkQuest(q);
+            div.appendChild(btn);
+        } else {
+            const span = document.createElement('span'); span.textContent = "✅"; div.appendChild(span);
+        }
+        list.appendChild(div);
+    });
+    document.getElementById('questModal').style.display = 'flex';
+}
+function checkQuest(q) {
+    if(q.check(gameState)) {
+        gameState.completedQuests.push(q.id);
+        gameState.coins += q.reward;
+        alert(`Квест выполнен: ${q.text}\nПолучено ${q.reward} монет!`);
+        openQuests(); updateQuestMarker(); updateUI();
+    } else alert("Условия еще не выполнены.");
+}
+function updateQuestMarker() {
+    const hasNew = quests.some(q => q.check(gameState) && !gameState.completedQuests.includes(q.id));
+    document.getElementById('npcQuestMark').style.display = hasNew ? 'block' : 'none';
+}
+function triggerEnding() {
+    document.getElementById('npcModal').style.display = 'none';
+    alert("Бывший Пиццайоло снимает маску...");
+    alert("Пиццайоло: 'Я был Пицца Рабом №001. Я сбежал из лаборатории Бургеров много лет назад.'");
+    alert("Пиццайоло: 'Ты уничтожил Тень Гнева и доказал свою силу. Возьми это.'");
+    alert("Получен предмет: Легендарная Скалка Предков!");
+    gameState.inventory["Легендарная Скалка"] = 1;
+    gameState.storyFinished = true;
+    unlockAch('legend_found');
+    updateUI();
+}
+
+// NINJA GAME
+function startNinjaGame() {
+    ninja.active = true; ninja.score = 0; ninja.elements = [];
+    document.getElementById('ninjaModal').style.display = 'block'; document.getElementById('ninjaScore').textContent = 0;
+    ninja.interval = setInterval(gameLoop, 20); ninja.spawnInterval = setInterval(spawnIngredient, 800);
+    const cvs = document.getElementById('ninjaGameArea'); cvs.addEventListener('mousemove', handleSlice); cvs.addEventListener('touchmove', handleSlice);
+}
+function spawnIngredient() {
+    if(!ninja.active) return;
+    const type = Math.random() < 0.2 ? 'bomb' : 'food';
+    const el = document.createElement('div'); el.className = 'ninja-object'; el.textContent = type === 'bomb' ? '💣' : ['🍅','🧀','🍄','🍕'].sort(()=>Math.random()-0.5)[0];
+    el.style.left = Math.random() * (window.innerWidth - 50) + 'px'; el.style.top = window.innerHeight + 'px';
+    document.getElementById('ninjaGameArea').appendChild(el);
+    ninja.elements.push({ el, x: parseFloat(el.style.left), y: window.innerHeight, vx: (Math.random()-0.5)*10, vy: -15-Math.random()*5, type });
+}
+function gameLoop() {
+    if(!ninja.active) return;
+    for(let i = ninja.elements.length - 1; i >= 0; i--) {
+        let o = ninja.elements[i]; o.x += o.vx; o.y += o.vy; o.vy += 0.5;
+        o.el.style.left = o.x + 'px'; o.el.style.top = o.y + 'px';
+        if(o.y > window.innerHeight + 100) { o.el.remove(); ninja.elements.splice(i, 1); }
+    }
+}
+function handleSlice(e) {
+    if(!ninja.active) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX; const y = e.touches ? e.touches[0].clientY : e.clientY;
+    const trail = document.createElement('div'); trail.className = 'slice-trail'; trail.style.left = x + 'px'; trail.style.top = y + 'px';
+    document.getElementById('ninjaGameArea').appendChild(trail); setTimeout(() => trail.remove(), 200);
+    for(let i = ninja.elements.length - 1; i >= 0; i--) {
+        let o = ninja.elements[i];
+        if(Math.sqrt((x-o.x-20)**2 + (y-o.y-20)**2) < 50) {
+            if(o.type === 'bomb') endNinjaGame(true);
+            else { ninja.score += 10; document.getElementById('ninjaScore').textContent = ninja.score; o.el.remove(); ninja.elements.splice(i, 1); }
+        }
+    }
+}
+function endNinjaGame(lost) {
+    ninja.active = false; clearInterval(ninja.interval); clearInterval(ninja.spawnInterval);
+    document.getElementById('ninjaGameArea').innerHTML = ''; document.getElementById('ninjaModal').style.display = 'none';
+    if(lost) alert(`Бум! Очки: ${ninja.score}`); else { gameState.coins += Math.floor(ninja.score/2); alert(`Победа! +${Math.floor(ninja.score/2)} монет.`); if(ninja.score>=200) unlockAch('ninja_master'); updateUI(); }
+}
+
+function renderShop() {
+    const list = document.getElementById('shopList'); list.innerHTML = '';
+    
+    // Calculate Discount (Sphynx Cat)
+    const sphynxCount = (gameState.cats.list || []).filter(c => c === 'sphynx').length;
+    const discount = 1 - (sphynxCount * 0.02);
+
+    shopItems.forEach(i => {
+        if(i.isSecret || gameState.ownedClasses.includes(i.name)) return;
+        const finalPrice = Math.floor(i.price * discount);
+        const div = document.createElement('div'); div.className = 'item-card';
+        div.innerHTML = `<h4>${i.name}</h4><small>HP: ${i.hp} | ATK: ${i.atk}</small><small>${i.special.desc}</small><button onclick="buyClass('${i.name}', ${finalPrice})" ${gameState.coins < finalPrice ? 'disabled' : ''}>${finalPrice}</button>`;
+        list.appendChild(div);
+    });
+}
+function buyClass(name, price) { if(gameState.coins >= price) { gameState.coins -= price; unlockClass(name); if(name==='пицца бот') unlockAch('bot_master'); if(name==='тесто-голем') unlockAch('unstoppable_force'); if(name==='повелитель зверей') document.getElementById('dinoBtn').style.display='inline-block'; checkAchievements(); } }
+function renderUpgrades() {
+    const list = document.getElementById('upgradeList'); list.innerHTML = '';
+    // Sphynx discount
+    const sphynxCount = (gameState.cats.list || []).filter(c => c === 'sphynx').length;
+    const discount = 1 - (sphynxCount * 0.02);
+
+    gameState.ownedClasses.forEach(name => {
+        const lvl = gameState.classLevels[name] || 1; 
+        const cost = Math.floor(Math.floor(100 * Math.pow(1.5, lvl)) * discount);
+        const div = document.createElement('div'); div.className = 'item-card';
+        div.innerHTML = `<h4>${name} (Lv.${lvl})</h4><button onclick="upgradeClass('${name}', ${cost})" ${gameState.coins < cost ? 'disabled' : ''}>UP (${cost})</button>`;
+        list.appendChild(div);
+    });
+}
+function upgradeClass(name, cost) { if(gameState.coins >= cost) { gameState.coins -= cost; gameState.classLevels[name]++; updateUI(); } }
+function renderItems() {
+    const list = document.getElementById('itemShopList'); list.innerHTML = '';
+    const sphynxCount = (gameState.cats.list || []).filter(c => c === 'sphynx').length;
+    const discount = 1 - (sphynxCount * 0.02);
+
+    items.forEach(i => {
+        if(i.isSecret) return;
+        const finalPrice = Math.floor(i.price * discount);
+        const div = document.createElement('div'); div.className = 'item-card';
+        div.innerHTML = `<h4>${i.name}</h4><small>x${gameState.inventory[i.name]||0}</small><button onclick="buyItem('${i.name}', ${finalPrice})" ${gameState.coins < finalPrice ? 'disabled' : ''}>${finalPrice}</button>`;
+        list.appendChild(div);
+    });
+}
+function buyItem(name, price) { if(gameState.coins >= price) { gameState.coins -= price; gameState.inventory[name] = (gameState.inventory[name]||0)+1; if(Object.keys(gameState.inventory).length>=3) unlockAch('pizza_collector'); updateUI(); } }
+function startAutoClickers() {
+    for(let k in gameState.autoClickers) clearInterval(gameState.autoClickers[k]);
+    
+    // Persian Cat Buff (Speed)
+    const persianCount = (gameState.cats.list || []).filter(c => c === 'persian').length;
+    const speedMult = Math.max(0.1, 1 - (persianCount * 0.1)); // 10% faster per cat, max cap implicit
+
+    // Legend Item Buff
+    const legendMult = (gameState.inventory["Легендарная Скалка"]||0) > 0 ? 1.5 : 1;
+
+    gameState.ownedClasses.forEach(name => {
+        const d = shopItems.find(i => i.name === name);
+        if(d && d.autoClick) {
+            gameState.autoClickers[name] = setInterval(() => { 
+                gameState.coins += Math.floor(d.autoClick.amount * legendMult); 
+                document.getElementById('coins').textContent = gameState.coins; 
+            }, d.autoClick.interval * speedMult);
+        }
+    });
+}
+function triggerAlienEvent() { alienEvent.active = true; alienEvent.macaroni = 0; document.getElementById('macaroniCount').textContent = 0; document.getElementById('alienModal').style.display = 'flex'; }
+function clickMacaroni() { alienEvent.macaroni += 10; document.getElementById('macaroniCount').textContent = alienEvent.macaroni; if(alienEvent.macaroni >= 2000) { alert("Вы сбежали! +Звёздный Пиццайоло"); unlockClass("Звёздный Пиццайоло"); unlockAch('abduction_survivor'); document.getElementById('alienModal').style.display = 'none'; alienEvent.active = false; } }
+
+// BATTLE
+let selectedParty = [];
+function openPartySelect(isBossRush) {
+    if(gameState.ownedClasses.length === 0) { alert("Нужны классы!"); return; }
+    if(!isBossRush && gameState.ownedClasses.length < 3) { alert("Нужно 3 класса!"); return; }
+    document.getElementById('npcModal').style.display = 'none';
+    document.getElementById('partySelectTitle').textContent = isBossRush ? "Выберите ГЕРОЯ" : "Выберите 3 бойцов";
+    document.getElementById('confirmBattleBtn').onclick = () => confirmBattle(isBossRush);
+    selectedParty = []; renderPartyGrid(isBossRush ? 1 : 3); 
+    document.getElementById('partySelectModal').style.display = 'flex';
+}
+function renderPartyGrid(max) {
+    const grid = document.getElementById('partyGrid'); grid.innerHTML = '';
+    gameState.ownedClasses.forEach(name => {
+        const div = document.createElement('div'); div.className = 'select-item ' + (selectedParty.includes(name) ? 'selected' : '');
+        div.textContent = `${name} (Lv.${gameState.classLevels[name]})`;
+        div.onclick = () => { if(selectedParty.includes(name)) selectedParty = selectedParty.filter(n=>n!==name); else if(selectedParty.length < max) selectedParty.push(name); renderPartyGrid(max); };
+        grid.appendChild(div);
+    });
+}
+function startBossRushSetup() { openPartySelect(true); }
+function confirmBattle(isBossRush) {
+    if(selectedParty.length !== (isBossRush ? 1 : 3)) { alert("Неверное кол-во!"); return; }
+    document.getElementById('partySelectModal').style.display = 'none';
+    if(isBossRush) initBossRush(); else initBattle();
+}
+function initBossRush() {
+    battle.isBossRush = true;
+    let list = enemies.filter(e => e.ai !== 'dummy' && e.name !== "Пицца Раб (Враг)" && e.ai !== 'camo' && e.name !== "Мелкий Аномалорони" && e.ai !== 'pizzasaur').map(e => ({...e}));
+    if(gameState.ownedClasses.includes("пицца кратос")) list.push({...specialEnemies.god});
+    battle.bossRushQueue = list; initBattle(true);
+}
+function initBattle(skipGen) {
+    battle.enemyParty = [];
+    battle.pizzasaurFed = 0; // Reset feeding
+    
+    // CALCULATE LEVEL SCORE
+    const partyLevels = selectedParty.map(name => gameState.classLevels[name] || 1);
+    const totalLevels = partyLevels.reduce((a,b)=>a+b, 0);
+    const levelScore = Math.max(1, Math.floor(totalLevels / 2));
+
+    const scale = (t) => {
+        let e = JSON.parse(JSON.stringify(t));
+        // Add minimal stats based on level diff
+        const levelDiff = Math.max(0, levelScore - (t.minLevel || 0));
+        e.hp += levelDiff * 20; e.maxHp = e.hp; e.atk += levelDiff * 2;
+        e.isDead = false; e.isRaged = false;
+        
+        // Camo Reset
+        if(e.ai === 'camo') {
+            e.realName = e.name;
+            e.realSprite = e.sprite;
+            e.name = "Бургер-Гангстер";
+            e.sprite = "🍔";
+            e.revealed = false;
+        }
+
+        return e;
+    };
+
+    if(battle.isBossRush) {
+        let next = battle.bossRushQueue.shift();
+        if(!next) { endBattle(true); return; }
+        battle.enemyParty.push(scale(next));
+    } else if (window.isSparring) {
+        battle.enemyParty.push(scale(enemies.find(e => e.ai === 'dummy'))); window.isSparring = false;
+    } else if (window.isDinoTime) {
+        // Dino Battle
+        const dino = enemies.find(e => e.ai === 'pizzasaur');
+        battle.enemyParty.push(scale(dino)); window.isDinoTime = false;
+    } else {
+        // Filter enemies based on level score
+        let avail = enemies.filter(e => e.ai !== 'dummy' && e.name !== "Тень Гнева (Босс)" && e.name !== "Бургер Бог" && (e.minLevel || 0) <= levelScore && e.name !== "Мелкий Аномалорони" && e.ai !== "pizzasaur");
+        if(avail.length === 0) avail = [enemies[0]];
+
+        if(gameState.ownedClasses.includes("пицца кратос")) avail.push(specialEnemies.god);
+
+        let main = avail[Math.floor(Math.random() * avail.length)];
+        
+        // BOSS WARNING
+        if(main.ai === 'boss' || main.ai === 'boss_swoon' || main.ai === 'bus' || main.ai === 'matriarch' || main.ai === 'camo') {
+            alert(`⚠️ ПИЦЦАЙОЛО ДРОЖИТ... ЭТО БОСС: ${main.name}!`);
+        }
+
+        battle.enemyParty.push(scale(main));
+        
+        const isBoss = (main.ai === 'boss' || main.ai === 'boss_swoon' || main.ai === 'matriarch');
+        if((Math.random() < 0.3 || main.name.includes("Бургер")) && !battle.isBossRush) {
+            let minion = enemies.find(e => e.name === "Картошка-Фри");
+            battle.enemyParty.push(scale(minion));
+            // Slave encounter logic
+            if(main.name.includes("Бургер") && !gameState.ownedClasses.includes("Пицца Раб") && Math.random() < 0.5) {
+                battle.enemyParty.push(scale(specialEnemies.slave));
+            }
+        }
+    }
+
+    // Maine Coon Buff
+    const coonCount = (gameState.cats.list || []).filter(c => c === 'mainecoon').length;
+    let atkMult = 1 + (coonCount * 0.05);
+
+    // Legend Item Buff
+    if((gameState.inventory["Легендарная Скалка"]||0) > 0) atkMult += 0.2;
+
+    battle.party = selectedParty.map((name, i) => {
+        const t = shopItems.find(x => x.name === name);
+        const lvl = gameState.classLevels[name] || 1;
+        let m = 1 + (lvl * 0.1);
+        let hm = 1, am = 1;
+        if(gameState.chosenPath === 'warrior') am += 0.2; if(gameState.chosenPath === 'healer') hm += 0.2;
+        if(gameState.chosenPath === 'tank') hm += 0.5;
+        
+        // Apply Cat & Item Buff
+        am += (atkMult - 1);
+
+        return { id: i, name, maxHp: Math.floor(t.hp*m*hm), hp: Math.floor(t.hp*m*hm), atk: Math.floor(t.atk*m*am), special: t.special, def: 0, isDead: false, isMounted: false };
+    });
+
+    battle.active = true; battle.turn = 0; battle.tp = 0; battle.activeCharIdx = 0;
+    battle.rageMode = false; battle.swoonTriggered = false; battle.targetIdx = 0;
+    if(battle.isBossRush) { battle.rageMode = true; battle.party[0].hp = battle.party[0].maxHp; }
+
+    document.getElementById('battleModal').style.display = 'flex';
+    logBattle("БОЙ НАЧАЛСЯ!", "yellow");
+    updateBattleUI(); findNextActiveChar();
+}
+
+function updateBattleUI() {
+    const es = document.getElementById('enemySlots'); es.innerHTML = '';
+    battle.enemyParty.forEach((en, i) => {
+        if(en.isDead) return;
+        const d = document.createElement('div');
+        let classes = 'enemy-card ' + (i === battle.targetIdx ? 'selected-target ' : '') + (en.isRaged ? 'rage ' : '');
+        if(en.ai === 'hostage') classes += 'hostage ';
+        if(en.name === 'Золотая Крыса') classes += 'golden ';
+        d.className = classes;
+        d.onclick = () => { battle.targetIdx = i; updateBattleUI(); };
+        d.innerHTML = `<div class="enemy-sprite">${en.sprite}</div><div style="font-size:0.8em">${en.name}</div><div class="hp-bar-bg" style="width:80px"><div class="hp-fill" style="background:var(--enemy-hp-color);width:${(en.hp/en.maxHp)*100}%"></div></div><div>${Math.max(0,en.hp)}</div>`;
+        es.appendChild(d);
+    });
+
+    const ps = document.getElementById('partySlots'); ps.innerHTML = '';
+    battle.party.forEach((p, i) => {
+        let cls = 'char-card'; if(i === battle.activeCharIdx && battle.turn===0 && !p.isDead) cls += ' active';
+        if(p.isDead) cls += ' dead'; if(battle.rageMode && !p.isDead) cls += ' rage';
+        if(p.isMounted) cls += ' mounted';
+        const d = document.createElement('div'); d.className = cls;
+        let icon = ""; if(p.isMounted) icon = "🦖 ";
+        d.innerHTML = `<div>${icon}<b>${p.name}</b> ${p.hp}/${p.maxHp}</div><div class="hp-bar-bg"><div class="hp-fill" style="width:${(p.hp/p.maxHp)*100}%"></div></div>`;
+        ps.appendChild(d);
+    });
+
+    document.getElementById('tpBar').style.width = battle.tp + '%'; document.getElementById('tpText').textContent = battle.tp;
+    document.getElementById('turnIndicator').textContent = battle.turn===0 ? "ВАШ ХОД" : "ВРАГ";
+    document.getElementById('turnIndicator').style.color = battle.turn===0 ? "var(--primary-color)" : "red";
+    
+    const char = battle.party[battle.activeCharIdx]; const can = battle.turn===0 && char && !char.isDead;
+    ['btnAtk','btnDef','btnItm','btnSkl'].forEach(id=>document.getElementById(id).disabled=!can);
+    const skl = document.getElementById('btnSkl');
+    if(can) {
+        if(battle.rageMode) { skl.textContent = "ВОЗМЕЗДИЕ"; skl.style.background = "var(--rage-color)"; }
+        else { skl.textContent = `${char.special.name} (${char.special.cost})`; skl.style.background = "#9b59b6"; skl.disabled = battle.tp < char.special.cost; }
+    }
+
+    // Mount Button Visibility
+    const mnt = document.getElementById('btnMount');
+    if(can && (gameState.inventory["Поводья Пиццазавра"]||0) > 0 && !char.isMounted) {
+        mnt.style.display = "block";
+    } else {
+        mnt.style.display = "none";
+    }
+}
+
+function logBattle(msg, c="#ccc") { const l = document.getElementById('battleLog'); l.innerHTML += `<div style="color:${c}">${msg}</div>`; l.scrollTop = l.scrollHeight; }
+function showDamage(x, y, t, c="white") { const e = document.createElement('div'); e.className = 'damage-popup'; e.textContent = t; e.style.color = c; e.style.left = x+'px'; e.style.top = y+'px'; document.body.appendChild(e); setTimeout(()=>e.remove(), 1000); }
+
+function findNextActiveChar() {
+    if(battle.party.every(p => p.isDead)) { endBattle(false); return; }
+    // Auto target
+    if(battle.enemyParty[battle.targetIdx]?.isDead) {
+        const ni = battle.enemyParty.findIndex(e=>!e.isDead);
+        if(ni !== -1) battle.targetIdx = ni; else {
+            // All enemies dead? Check win condition first
+            checkWinCondition();
+            return;
+        }
+    }
+    updateBattleUI();
+}
+
+function playerAction(type) {
+    const c = battle.party[battle.activeCharIdx];
+    let t = battle.enemyParty[battle.targetIdx];
+    if(!t || t.isDead) return;
+
+    if(type === 'attack') {
+        let d = c.atk; if(battle.rageMode) d *= 3;
+        // Camo Reveal Logic
+        if(t.ai === 'camo' && !t.revealed) {
+            t.revealed = true; t.name = t.realName; t.sprite = t.realSprite;
+            logBattle("КАМУФЛЯЖ РАСКРЫТ!", "orange");
+            showDamage(window.innerWidth/2, window.innerHeight/2, "РАЗОБЛАЧЕНИЕ!", "red");
+        }
+        
+        // Pizzasaur warning
+        if(t.ai === 'pizzasaur') {
+             if(Math.random() < 0.2) logBattle("Пиццазавр рычит!", "orange");
+        }
+
+        t.hp -= d; battle.tp = Math.min(100, battle.tp+10); logBattle(`${c.name} атаковал (-${d})`);
+    } else if (type === 'defend') {
+        c.def = gameState.chosenPath==='tank'?0.8:0.5; battle.tp = Math.min(100, battle.tp+15); logBattle("Защита");
+    } else if (type === 'special') {
+        if(battle.rageMode) { t.hp -= c.atk*10; logBattle("ВОЗМЕЗДИЕ!", "orange"); }
+        else {
+            battle.tp -= c.special.cost;
+            
+            // Beastmaster Tame
+            if(c.special.name === "Укрощение" && t.ai === "pizzasaur") {
+                 let chance = 0.1 + (battle.pizzasaurFed * 0.2); // +20% per pizza
+                 if(Math.random() < chance) {
+                     alert("ВЫ ПРИРУЧИЛИ ПИЦЦАЗАВРА! ОН ВАШ!");
+                     gameState.inventory["Поводья Пиццазавра"] = 1;
+                     unlockAch("dino_tamer");
+                     endBattle(true); return;
+                 } else {
+                     logBattle("Укрощение провалилось...", "red");
+                     t.hp -= 20; // Small damage
+                 }
+            }
+            // Simplified special logic for brevity
+            else if(c.special.name.includes("Уборка")) { t.hp = 0; logBattle("Уборка!", "cyan"); }
+            else if(c.special.name.includes("хилл")) { c.hp = c.maxHp; logBattle("Лечение", "green"); }
+            else { t.hp -= c.atk*2; logBattle("Навык!"); }
+        }
+    } else if (type === 'item') {
+        if(gameState.inventory["Кусочек пиццы"]>0) { 
+            gameState.inventory["Кусочек пиццы"]--; 
+            
+            // Feeding Pizzasaur
+            if(t.ai === 'pizzasaur') {
+                battle.pizzasaurFed++;
+                logBattle("Пиццазавр съел пиццу! (Доверие растет)", "green");
+                t.atk = Math.max(10, t.atk - 10); // Becomes less aggressive
+            } else {
+                c.hp=Math.min(c.maxHp, c.hp+50); logBattle("Пицца (+50HP)"); 
+            }
+            updateUI(); 
+        }
+        else { logBattle("Нет предметов", "red"); return; }
+    } else if (type === 'mount') {
+        // Mount mechanic
+        c.isMounted = true;
+        c.maxHp += 500; c.hp += 500; c.atk += 50;
+        logBattle(`${c.name} ОСЕДЛАЛ ПИЦЦАЗАВРА!`, "gold");
+        battle.tp = Math.max(0, battle.tp - 50); // Cost 50 TP maybe? Or free since item
+        // One time use per char, button hides
+    }
+
+    if(t.hp <= 0) { t.hp = 0; t.isDead = true; logBattle(`${t.name} повержен!`, "green"); }
+    
+    // Check win condition instantly after action
+    if(checkWinCondition()) return;
+    
+    if(battle.active) advanceTurn();
+}
+
+function advanceTurn() {
+    battle.activeCharIdx++;
+    while(battle.activeCharIdx < battle.party.length && battle.party[battle.activeCharIdx].isDead) battle.activeCharIdx++;
+    if(battle.activeCharIdx >= battle.party.length) { battle.turn = 1; battle.activeCharIdx = -1; updateBattleUI(); setTimeout(enemyAI, 1000); }
+    else updateBattleUI();
+}
+
+function enemyAI() {
+    if(!battle.active) return;
+    
+    // NPC Helper
+    if(gameState.npcHelperActive && Math.random() < 0.5) {
+        const t = battle.enemyParty.find(e=>!e.isDead); if(t) { t.hp -= 20; logBattle("Помощь НПС (-20)", "cyan"); }
+    }
+
+    // CHECK ENEMY RAGE (Last Stand)
+    const aliveEnemies = battle.enemyParty.filter(e => !e.isDead);
+    if(battle.enemyParty.length > 1 && aliveEnemies.length === 1 && !aliveEnemies[0].isRaged && aliveEnemies[0].ai !== 'hostage') {
+        const survivor = aliveEnemies[0];
+        survivor.isRaged = true;
+        survivor.atk = Math.floor(survivor.atk * 1.5);
+        logBattle(`🔥 ${survivor.name} В ЯРОСТИ! (Остался один)`, "red");
+        document.getElementById('battleContainer').classList.add('swoon-effect');
+        setTimeout(()=>document.getElementById('battleContainer').classList.remove('swoon-effect'), 500);
+    }
+
+    aliveEnemies.forEach(en => {
+        // Hostage Logic
+        if(en.ai === 'hostage') {
+            logBattle(`${en.name} дрожит от страха...`);
+            return;
+        }
+
+        // Pizzasaur Logic
+        if(en.ai === 'pizzasaur') {
+             if(Math.random() < 0.3) {
+                 logBattle("Пиццазавр ищет еду...", "yellow");
+                 return; // Skipped turn looking for food
+             }
+        }
+
+        // Flee Logic (Golden Rat)
+        if(en.ai === 'flee') {
+            logBattle(`${en.name} пытается сбежать!`, "gold");
+            if(Math.random() < 0.3) {
+                en.hp = 0; en.isDead = true; en.reward = 0; // Fled
+                logBattle(`${en.name} сбежала с деньгами!`, "red");
+            }
+            return;
+        }
+
+        // Traitor Logic
+        if(en.ai === 'traitor' && Math.random() < 0.4) {
+             const t = battle.party.filter(p=>!p.isDead)[0];
+             if(t) {
+                let dmg = Math.floor(en.atk * 1.5);
+                t.hp -= dmg;
+                battle.tp = Math.max(0, battle.tp - 20);
+                logBattle(`${en.name} использует ПРЕДАТЕЛЬСТВО!`, "purple");
+                if(t.hp<=0) { t.hp=0; t.isDead=true; }
+             }
+             return;
+        }
+
+        // Regen Logic (Ancient Dough)
+        if(en.ai === 'regen') {
+            const heal = Math.floor(en.maxHp * 0.1);
+            en.hp = Math.min(en.maxHp, en.hp + heal);
+            logBattle(`${en.name} восстанавливает форму (+${heal})`, "green");
+        }
+
+        // Tank Logic (Mecha Oven)
+        if(en.ai === 'tank' && Math.random() < 0.3) {
+            logBattle(`${en.name} активирует ЩИТ!`, "blue");
+            // Simplified: skips attack to defend (next hit logic handled by player dmg calc usually, but here just flavor + skip atk)
+            return;
+        }
+
+        // BUS LOGIC
+        if(en.ai === 'bus' && en.hp < en.maxHp * 0.5 && Math.random() < 0.33) {
+             const targets = battle.party.filter(p=>!p.isDead);
+             if(targets.length > 0) {
+                 const t = targets[Math.floor(Math.random()*targets.length)];
+                 logBattle(`🚌 АВТОБУС ПЕРЕЕХАЛ ${t.name}!`, "red");
+                 showDamage(window.innerWidth/2, window.innerHeight/2, "CRITICAL HIT!", "red");
+                 t.hp = 0; t.isDead = true;
+                 return; // Bus used special, end its turn
+             }
+        }
+
+        // MATRIARCH LOGIC
+        if(en.ai === 'matriarch') {
+            // Spawn Minions
+            if(battle.enemyParty.length < 5 && Math.random() < 0.3) {
+                 const minionTemplate = enemies.find(e=>e.name==="Мелкий Аномалорони");
+                 if(minionTemplate) {
+                     const minion = JSON.parse(JSON.stringify(minionTemplate));
+                     minion.hp = 100; minion.maxHp = 100; minion.isDead = false;
+                     battle.enemyParty.push(minion);
+                     logBattle("🦐 Матка призвала Аномалорони!", "green");
+                     updateBattleUI();
+                 }
+            }
+        }
+
+        // BOSS SWOON LOGIC (Player Rage)
+        if((en.ai === 'boss_swoon' || en.ai === 'matriarch') && !battle.swoonTriggered && en.hp < en.maxHp*0.4 && !battle.isBossRush) {
+            battle.swoonTriggered = true; logBattle(`⚠️ ${en.name} ИСПОЛЬЗУЕТ SWOON!`, "red");
+            const survivors = battle.party.filter(p=>!p.isDead);
+            if(survivors.length > 1) {
+                const lucky = survivors[Math.floor(Math.random()*survivors.length)];
+                battle.party.forEach(p => { if(p !== lucky) { p.hp = 0; p.isDead = true; } });
+                lucky.maxHp *= 2; lucky.hp = lucky.maxHp; lucky.atk *= 2; battle.rageMode = true;
+                logBattle(`🔥 ${lucky.name} В ГНЕВЕ!`, "orange");
+                unlockAch('rage_mode');
+            }
+        } else {
+            const t = battle.party.filter(p=>!p.isDead)[Math.floor(Math.random()*battle.party.filter(p=>!p.isDead).length)];
+            if(t) {
+                let dmg = en.atk;
+                if(battle.godMode) dmg = 0;
+                if(t.def > 0) { dmg = Math.floor(dmg*t.def); t.def = 0; }
+                t.hp -= dmg; if(t.hp<=0) { t.hp=0; t.isDead=true; }
+                logBattle(`${en.name} бьет ${t.name} (-${dmg})`);
+            }
+        }
+    });
+
+    if(battle.party.every(p=>p.isDead)) endBattle(false);
+    else { battle.turn = 0; battle.activeCharIdx = 0; while(battle.party[battle.activeCharIdx].isDead) battle.activeCharIdx++; updateBattleUI(); }
+}
+
+function checkWinCondition() {
+    const aliveEnemies = battle.enemyParty.filter(e => !e.isDead);
+    const threats = aliveEnemies.filter(e => e.ai !== 'hostage');
+    
+    // Win if all threats are gone
+    if(threats.length === 0) {
+        if(battle.isBossRush && battle.bossRushQueue.length > 0) { logBattle("След. враг...", "yellow"); setTimeout(()=>initBattle(true),1000); return true; }
+        else {
+            endBattle(true, aliveEnemies.some(e => e.ai === 'hostage'));
+            return true;
+        }
+    }
+    return false;
+}
+
+function endBattle(win, savedHostage) {
+    battle.active = false;
+    if(win) {
+        let r = battle.enemyParty.reduce((a,b)=>a+(b.reward||0),0);
+        if(battle.isBossRush) { r = 10000; unlockAch('boss_rush_complete'); }
+        gameState.coins += r; 
+        gameState.stats.battlesWon = (gameState.stats.battlesWon||0) + 1;
+        
+        // Track bosses
+        battle.enemyParty.forEach(e => {
+            if(e.ai==='boss' || e.ai==='boss_swoon' || e.ai==='bus' || e.ai==='matriarch' || e.ai==='camo') {
+                if(!gameState.stats.bossesDefeated) gameState.stats.bossesDefeated = [];
+                if(!gameState.stats.bossesDefeated.includes(e.name)) gameState.stats.bossesDefeated.push(e.name);
+            }
+        });
+
+        // Slave Rescue
+        if(savedHostage && !gameState.ownedClasses.includes("Пицца Раб")) {
+            alert("Вы спасли Пицца Раба! Он присоединился к вам."); unlockClass("Пицца Раб"); unlockAch('slave_freed');
+        }
+
+        updateUI(); updateQuestMarker(); unlockAch('win_battle');
+        checkAchievements();
+        if(!battle.isBossRush) alert(`Победа! +${r} монет.`);
+    } else alert("Поражение...");
+    battle.isBossRush = false; battle.bossRushQueue = [];
+    document.getElementById('battleModal').style.display = 'none';
+}
+function exitBattle() { if(confirm("Сбежать?")) endBattle(false); }
+function saveGame() { try { localStorage.setItem('pizzaSaveV5', JSON.stringify(gameState)); } catch(e){} }
+function loadGame() {
+    try {
+        const d = JSON.parse(localStorage.getItem('pizzaSaveV5'));
+        if(d) {
+            gameState.coins = d.coins||0; gameState.ownedClasses = d.ownedClasses||[];
+            gameState.classLevels = d.classLevels||{}; gameState.inventory = d.inventory||{};
+            gameState.unlockedAchievements = d.unlockedAchievements||[]; gameState.usedCodes = d.usedCodes||[];
+            gameState.npcHelperActive = d.npcHelperActive||false; gameState.catActive = d.catActive||false;
+            gameState.chosenPath = d.chosenPath||null; 
+            gameState.stats = d.stats || { battlesWon: 0, bossesDefeated: [] };
+            gameState.completedQuests = d.completedQuests || [];
+            gameState.storyFinished = d.storyFinished || false;
+            
+            if(d.cats) { 
+                gameState.cats.count = d.cats.count||0; 
+                gameState.cats.fed = d.cats.fed||0; 
+                gameState.cats.list = d.cats.list||[];
+            }
+        }
+    } catch(e) {}
+}
+async function handleModLoad(e) {
+    const f = e.target.files[0]; if(!f) return;
+    try {
+        const z = await new JSZip().loadAsync(f);
+        if(z.file("data/main.json")) {
+            const d = JSON.parse(await z.file("data/main.json").async("string"));
+            if(d.classes) d.classes.forEach(c=>shopItems.push({name:c.name,price:c.price,hp:50,atk:5,special:{name:"Mod",cost:10,desc:"-"}}));
+            alert("Мод загружен!"); renderShop();
+        }
+    } catch(x) { alert("Ошибка мода"); }
+}
+document.getElementById('modFileInput').addEventListener('change', handleModLoad);
+</script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
